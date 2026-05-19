@@ -73,12 +73,42 @@ export class ResourceUnavailableError extends Error {
  */
 export class ResourceDependencyFailedError extends Error {
   override readonly name = 'ResourceDependencyFailedError';
+
+  /** @see ResourceDependencyFailedError.from for the canonical construction path. */
   constructor(
     public readonly resourceName: string,
     public readonly failedDependency: string,
     public readonly originalError: Error,
   ) {
     super(`Resource ${resourceName} skipped: dependency ${failedDependency} failed`);
+  }
+
+  /**
+   * Construct a ResourceDependencyFailedError from an unknown cause. The
+   * orchestrator MUST use this factory rather than the bare constructor,
+   * because cause sites typically have `cause: unknown` (per TS 4.4+
+   * useUnknownInCatchVariables). The factory normalizes non-Error causes
+   * into Error instances so the originalError field stays typed as Error
+   * for downstream consumers.
+   */
+  static from(
+    resourceName: string,
+    failedDependency: string,
+    cause: unknown,
+  ): ResourceDependencyFailedError {
+    let wrapped: Error;
+    if (cause instanceof Error) {
+      wrapped = cause;
+    } else if (typeof cause === 'string') {
+      wrapped = new Error(cause);
+    } else {
+      try {
+        wrapped = new Error(JSON.stringify(cause) ?? String(cause));
+      } catch {
+        wrapped = new Error(String(cause));
+      }
+    }
+    return new ResourceDependencyFailedError(resourceName, failedDependency, wrapped);
   }
 }
 

@@ -1,5 +1,11 @@
 export type * from './check-context.js';
 export type * from './check-result.js';
+export type {
+  EmailAuthOptions,
+  SecretPattern,
+  SecretPatternSeverity,
+  SecretScanOptions,
+} from './checker-options.js';
 export type * from './common.js';
 export type * from './live-context.js';
 export type * from './project-context.js';

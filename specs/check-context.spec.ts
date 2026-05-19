@@ -200,12 +200,42 @@ export class ResourceUnavailableError extends Error {
  */
 export class ResourceDependencyFailedError extends Error {
   override readonly name = 'ResourceDependencyFailedError';
+
+  /** @see ResourceDependencyFailedError.from for the canonical construction path. */
   constructor(
     public readonly resourceName: string,
     public readonly failedDependency: string,
     public readonly originalError: Error,
   ) {
     super(`Resource ${resourceName} skipped: dependency ${failedDependency} failed`);
+  }
+
+  /**
+   * Construct a ResourceDependencyFailedError from an unknown cause. The
+   * orchestrator MUST use this factory rather than the bare constructor,
+   * because cause sites typically have `cause: unknown` (per TS 4.4+
+   * useUnknownInCatchVariables). The factory normalizes non-Error causes
+   * into Error instances so the originalError field stays typed as Error
+   * for downstream consumers.
+   */
+  static from(
+    resourceName: string,
+    failedDependency: string,
+    cause: unknown,
+  ): ResourceDependencyFailedError {
+    let wrapped: Error;
+    if (cause instanceof Error) {
+      wrapped = cause;
+    } else if (typeof cause === 'string') {
+      wrapped = new Error(cause);
+    } else {
+      try {
+        wrapped = new Error(JSON.stringify(cause) ?? String(cause));
+      } catch {
+        wrapped = new Error(String(cause));
+      }
+    }
+    return new ResourceDependencyFailedError(resourceName, failedDependency, wrapped);
   }
 }
 
@@ -247,9 +277,19 @@ export interface ProjectContext {
 
   /**
    * Absolute path to the git repository root, if projectDir is inside a git
-   * repo. Null otherwise. Resolved once at startup via `git rev-parse`.
-   * Checkers that scan git history (lockfile committed, large files in history)
-   * must use this, not projectDir, and must skip with a clear message when null.
+   * repo. Null otherwise. Resolved once at startup via
+   * `git -C projectDir rev-parse --show-toplevel`.
+   *
+   * Three cases:
+   *   - gitRoot === projectDir: projectDir IS the repo root.
+   *   - gitRoot !== projectDir && gitRoot !== null: projectDir is a
+   *     subdirectory of a larger repo (monorepo subpackage). Git-dependent
+   *     checkers MUST scope their queries to projectDir
+   *     (e.g., `git -C gitRoot ls-files -- <projectDir>/package-lock.json`),
+   *     not the whole repo.
+   *   - gitRoot === null: projectDir is not in a git repo, OR the `git`
+   *     binary is unavailable. Git-dependent checkers MUST emit
+   *     status: 'skip' with a message naming the cause.
    */
   gitRoot: string | null;
 
