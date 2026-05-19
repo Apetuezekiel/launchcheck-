@@ -62,7 +62,7 @@ export const seoCheckers: ReadonlyArray<RegistryEntry> = [
     defaultEnabled: true,
     maxSeverity: 'major',
     description: 'GET `/robots.txt`; expects 200; warns if `Disallow: /` is set.',
-    consumes: ['dom', 'http'],
+    consumes: ['http'],
   },
   {
     id: 'single-h1',
@@ -82,7 +82,7 @@ export const seoCheckers: ReadonlyArray<RegistryEntry> = [
     defaultEnabled: true,
     maxSeverity: 'major',
     description: 'GET `/sitemap.xml`; expects 200 + valid XML.',
-    consumes: ['dom', 'http'],
+    consumes: ['http'],
   },
   {
     id: 'structured-data',
