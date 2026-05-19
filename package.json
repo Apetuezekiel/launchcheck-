@@ -22,7 +22,10 @@
       }
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "bin": {
+    "launchcheck": "./bin/launchcheck.mjs"
+  },
+  "files": ["dist", "bin", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
