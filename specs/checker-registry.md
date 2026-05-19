@@ -73,9 +73,9 @@ Read from `ResolvedConfig.checkerOptions`.
 
 ### Static (1)
 
-| checkerId | name | mode | max severity | options |
-|---|---|---|---|---|
-| `secret-scan` | No hardcoded secrets | static | critical | `secret-scan` |
+| checkerId | name | mode | max severity | options | description |
+|---|---|---|---|---|---|
+| `secret-scan` | No hardcoded secrets | static | critical | `secret-scan` | Scans source files for known secret patterns (API keys, tokens, private keys, credentials). User-configurable via the `secret-scan` options. |
 
 ### Live — security headers (9, all consume `rootResponse`)
 
@@ -93,32 +93,32 @@ Read from `ResolvedConfig.checkerOptions`.
 
 ### Live — TLS/SSL (2, consume `tls`)
 
-| checkerId | name | max severity | thresholds |
-|---|---|---|---|
-| `ssl-valid` | SSL certificate valid | critical | — |
-| `ssl-not-expiring` | SSL certificate not expiring within N days | major | `ssl-expiry-warning-days` |
+| checkerId | name | max severity | thresholds | description |
+|---|---|---|---|---|
+| `ssl-valid` | SSL certificate valid | critical | — | TLS certificate is valid and trusted by the system root store. |
+| `ssl-not-expiring` | SSL certificate not expiring within N days | major | `ssl-expiry-warning-days` | TLS certificate does not expire within the configured warning window (`ssl-expiry-warning-days`). |
 
 ### Live — email auth (3, consume `dns`, gated by `email-auth.enabled`)
 
-| checkerId | name | max severity | options |
-|---|---|---|---|
-| `spf-record` | SPF record present | major | `email-auth` |
-| `dkim-record` | DKIM record present for each configured selector | major | `email-auth` |
-| `dmarc-record` | DMARC record present | minor | `email-auth` |
+| checkerId | name | max severity | options | description |
+|---|---|---|---|---|
+| `spf-record` | SPF record present | major | `email-auth` | SPF TXT record is present at the configured domain. Self-skips when `email-auth.enabled` is false. |
+| `dkim-record` | DKIM record present for each configured selector | major | `email-auth` | DKIM TXT record is present at `<selector>._domainkey.<domain>` for each configured selector. Self-skips when `email-auth.enabled` is false. |
+| `dmarc-record` | DMARC record present | minor | `email-auth` | DMARC TXT record is present at `_dmarc.<domain>`. Self-skips when `email-auth.enabled` is false. |
 
 ## Category: performance (10 checkers, all live)
 
 ### Consume `lighthouse` (7)
 
-| checkerId | name | max severity | thresholds |
-|---|---|---|---|
-| `lighthouse-performance-score` | Lighthouse Performance ≥ threshold | major | `lighthouse-performance` |
-| `lighthouse-accessibility-score` | Lighthouse Accessibility ≥ threshold | major | `lighthouse-accessibility` |
-| `lighthouse-best-practices-score` | Lighthouse Best Practices ≥ threshold | major | `lighthouse-best-practices` |
-| `lighthouse-seo-score` | Lighthouse SEO ≥ threshold | major | `lighthouse-seo` |
-| `core-web-vital-lcp` | LCP < threshold | major | `lcp` |
-| `core-web-vital-cls` | CLS < threshold | major | `cls` |
-| `core-web-vital-inp` | INP < threshold | major | `inp` |
+| checkerId | name | max severity | thresholds | description |
+|---|---|---|---|---|
+| `lighthouse-performance-score` | Lighthouse Performance ≥ threshold | major | `lighthouse-performance` | Lighthouse Performance category score is at or above the `lighthouse-performance` threshold (default 90). |
+| `lighthouse-accessibility-score` | Lighthouse Accessibility ≥ threshold | major | `lighthouse-accessibility` | Lighthouse Accessibility category score is at or above the `lighthouse-accessibility` threshold (default 90). |
+| `lighthouse-best-practices-score` | Lighthouse Best Practices ≥ threshold | major | `lighthouse-best-practices` | Lighthouse Best Practices category score is at or above the `lighthouse-best-practices` threshold (default 90). |
+| `lighthouse-seo-score` | Lighthouse SEO ≥ threshold | major | `lighthouse-seo` | Lighthouse SEO category score is at or above the `lighthouse-seo` threshold (default 90). |
+| `core-web-vital-lcp` | LCP < threshold | major | `lcp` | Largest Contentful Paint is below the `lcp` threshold (default 2500ms). |
+| `core-web-vital-cls` | CLS < threshold | major | `cls` | Cumulative Layout Shift is below the `cls` threshold (default 0.1). |
+| `core-web-vital-inp` | INP < threshold | major | `inp` | Interaction to Next Paint is below the `inp` threshold (default 200ms). |
 
 ### Consume `rootResponse` / `dom` / ad-hoc HTTP (3)
 
@@ -148,14 +148,14 @@ Read from `ResolvedConfig.checkerOptions`.
 
 Each checker reads `ctx.live.axe.get()` and filters violations by axe rule ID.
 
-| checkerId | name | max severity | axe rule(s) consumed |
-|---|---|---|---|
-| `a11y-image-alt-text` | All images have alt text | major | `image-alt`, `area-alt`, `input-image-alt` |
-| `a11y-color-contrast` | Color contrast meets WCAG AA | major | `color-contrast` |
-| `a11y-focus-states` | Focus states on interactive elements | major | `focus-order-semantics`, `focusable-content` |
-| `a11y-touch-targets` | Touch targets ≥ 44x44px | minor | `target-size` |
-| `a11y-aria-valid` | ARIA attributes used correctly | major | All `aria-*` axe rules (consolidated) |
-| `a11y-keyboard-tab-order` | Logical tab order (partial automation) | major | `tabindex`, `landmark-*` rules; partial signal — axe cannot fully verify keyboard nav. |
+| checkerId | name | max severity | axe rule(s) consumed | description |
+|---|---|---|---|---|
+| `a11y-image-alt-text` | All images have alt text | major | `image-alt`, `area-alt`, `input-image-alt` | All images have alternative text. Axe rules: `image-alt`, `area-alt`, `input-image-alt`. |
+| `a11y-color-contrast` | Color contrast meets WCAG AA | major | `color-contrast` | Text color contrast meets WCAG AA. Axe rule: `color-contrast`. |
+| `a11y-focus-states` | Focus states on interactive elements | major | `focus-order-semantics`, `focusable-content` | Interactive elements have visible focus states. Axe rules: `focus-order-semantics`, `focusable-content`. |
+| `a11y-touch-targets` | Touch targets ≥ 44x44px | minor | `target-size` | Touch targets are at least 44×44px. Axe rule: `target-size`. |
+| `a11y-aria-valid` | ARIA attributes used correctly | major | All `aria-*` axe rules (consolidated) | ARIA attributes are used correctly. Consolidates all axe `aria-*` rules. |
+| `a11y-keyboard-tab-order` | Logical tab order (partial automation) | major | `tabindex`, `landmark-*` rules; partial signal — axe cannot fully verify keyboard nav. | Logical tab order for keyboard navigation. Axe rules: `tabindex`, `landmark-*` (partial signal — axe cannot fully verify keyboard nav). |
 
 ## Category: deployment (4 checkers)
 
