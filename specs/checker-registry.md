@@ -128,7 +128,7 @@ Read from `ResolvedConfig.checkerOptions`.
 | `static-asset-cache-headers` | Cache-Control on static assets | minor | `dom`, `http` | Extracts `<script>`, `<link rel="stylesheet">`, `<img>` URLs from DOM; HEAD each; checks `Cache-Control` is long-lived (max-age ≥ 86400). Emits one consolidated result per asset class. |
 | `font-preload-and-display-swap` | Fonts preloaded + font-display: swap | minor | `dom`, `http` | Checks `<link rel="preload" as="font">` for primary fonts; fetches CSS, scans for `font-display: swap`. |
 
-## Category: seo (11 checkers, all live, all consume `dom`)
+## Category: seo (11 checkers, all live; 9 consume `dom`, 2 consume only ad-hoc `http`)
 
 | checkerId | name | max severity | consumes | description |
 |---|---|---|---|---|
@@ -199,7 +199,7 @@ All others emit a single result whose resultId equals the checkerId.
 | Resource | Consumed by |
 |---|---|
 | `rootResponse` | All 9 security-headers checkers, `compression-enabled`, `cors-not-wildcard` |
-| `dom` | All 11 SEO checkers, `static-asset-cache-headers`, `font-preload-and-display-swap`, `favicon-present` |
+| `dom` | 9 SEO checkers (all except `sitemap-xml-accessible` and `robots-txt-accessible`), `static-asset-cache-headers`, `font-preload-and-display-swap`, `favicon-present` |
 | `lighthouse` | 7 performance checkers (4 score, 3 CWV) |
 | `axe` | 6 accessibility checkers |
 | `tls` | `ssl-valid`, `ssl-not-expiring` |
