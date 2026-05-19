@@ -1,0 +1,126 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`runList > --json structure matches snapshot 1`] = `
+{
+  "count": 59,
+  "sample": [
+    {
+      "category": "code-quality",
+      "defaultEnabled": true,
+      "description": "AST/regex scan for \`console.log\`, \`console.debug\`, \`console.error\`, \`console.warn\`, \`debugger\` statements in \`src/\` and equivalent (excludes test files matching \`*.test.*\`, \`*.spec.*\`, \`__tests__/**\`).",
+      "id": "console-log-scan",
+      "maxSeverity": "major",
+      "mode": "static",
+      "name": "No console statements in production code",
+    },
+    {
+      "category": "code-quality",
+      "defaultEnabled": true,
+      "description": "Detects ESLint config (\`.eslintrc*\`, \`eslint.config.*\`, or \`eslintConfig\` in package.json); runs \`npx eslint .\` and parses JSON output. Skips when no config.",
+      "id": "eslint-passing",
+      "maxSeverity": "major",
+      "mode": "static",
+      "name": "ESLint configured and passing",
+    },
+    {
+      "category": "code-quality",
+      "defaultEnabled": true,
+      "description": "Reads \`<projectDir>/.gitignore\`; checks for required patterns: \`node_modules\`, \`.env*\`, \`dist\`, build output, \`.DS_Store\`, IDE configs. Emits one result per missing pattern category.",
+      "emitsMultipleResults": true,
+      "id": "gitignore-coverage",
+      "maxSeverity": "major",
+      "mode": "static",
+      "name": ".gitignore covers required patterns",
+    },
+  ],
+  "version": "dev",
+}
+`;
+
+exports[`runList > default terminal output matches snapshot 1`] = `
+"launchcheck vdev — checker registry (59 entries)
+
+code-quality (7)
+  id                              mode  default severity description
+  console-log-scan                static on     major   AST/regex scan for \`console.log\`, \`console.debug\`, \`console.error\`, \`console.warn\`, \`debugger\` statements in \`src/\` and equivalent (excludes test files matching \`*.test.*\`, \`*.spec.*\`, \`__tests__/**\`).
+  eslint-passing                  static on     major   Detects ESLint config (\`.eslintrc*\`, \`eslint.config.*\`, or \`eslintConfig\` in package.json); runs \`npx eslint .\` and parses JSON output. Skips when no config.
+  gitignore-coverage              static on     major   Reads \`<projectDir>/.gitignore\`; checks for required patterns: \`node_modules\`, \`.env*\`, \`dist\`, build output, \`.DS_Store\`, IDE configs. Emits one result per missing pattern category.
+  large-files-in-git-history      static on     minor   Walks git history filtered to \`projectDir\` (monorepo policy); flags any tracked file exceeding \`thresholds.large-file-bytes\`. Skips when \`gitRoot === null\`.
+  prettier-passing                static on     minor   Detects Prettier config (\`.prettierrc*\`, \`prettier.config.*\`, \`prettier\` in package.json); runs \`npx prettier --check .\`. Skips when no config.
+  todo-fixme-scan                 static on     minor   Regex scan for \`TODO\`, \`FIXME\`, \`XXX\`, \`HACK\` comments in source files, excluding test files.
+  typescript-strict-compile       static on     major   Detects \`tsconfig.json\`; if \`strict: true\`, runs \`tsc --noEmit\` and parses output for diagnostics. Skips when no tsconfig. Requires \`typescript\` peer dep.
+
+dependencies (5)
+  id                              mode  default severity description
+  dependencies-outdated           static on     major   Runs \`npm outdated --json\` plus a registry query (or parses npm's deprecation flag) to flag deprecated packages. Outdated-but-not-deprecated is \`info\`-level.
+  license-compatibility           static on     major   Walks dependency tree, checks SPDX license identifier. Default deny list: GPL-*, AGPL-*, LGPL-* (configurable). Skips when \`treatProprietaryAsDefault: false\` in options.
+  lockfile-committed              static on     major   Checks \`package-lock.json\`, \`yarn.lock\`, or \`pnpm-lock.yaml\` is tracked at \`<projectDir>\` (monorepo-scoped). Skips when \`gitRoot === null\`.
+  npm-audit                       static on     critical Runs \`npm audit --json\`; fails on any \`critical\`, warns on \`high\`, ignores moderate/low. Severity escalates to \`critical\` on any critical finding.
+  unused-dependencies             static on     minor   Cross-references \`package.json\` \`dependencies\` against import/require statements in \`src/\`. Excludes obvious peer/dev deps. Heuristic — high FP risk; default severity \`info\`, can be elevated via config.
+
+security (15)
+  id                              mode  default severity description
+  clickjacking-protection         live  on     major   Either \`X-Frame-Options: DENY/SAMEORIGIN\` OR CSP with \`frame-ancestors\` directive.
+  cors-not-wildcard               live  on     critical OPTIONS request via configured \`probePath\` (default \`/\`); checks \`Access-Control-Allow-Origin\` is not \`*\`. Also consumes ad-hoc \`http\`.
+  csp-present                     live  on     major   Header check; warns if uses \`unsafe-inline\` or \`unsafe-eval\` without nonce/hash.
+  dkim-record                     live  on     major   DKIM TXT record is present at \`<selector>._domainkey.<domain>\` for each configured selector. Self-skips when \`email-auth.enabled\` is false.
+  dmarc-record                    live  on     minor   DMARC TXT record is present at \`_dmarc.<domain>\`. Self-skips when \`email-auth.enabled\` is false.
+  hsts-present                    live  on     critical Header check + parses \`max-age\`; warns if max-age < 15768000 (6 months).
+  https-enforcement               live  on     critical GET against \`http://\` variant of URL; expects redirect chain ending at \`https://\`. Also consumes ad-hoc \`http\`.
+  permissions-policy-present      live  on     minor   Header presence; no value validation in v1.
+  referrer-policy-present         live  on     minor   Any valid Referrer-Policy value.
+  secret-scan                     static on     critical Scans source files for known secret patterns (API keys, tokens, private keys, credentials). User-configurable via the \`secret-scan\` options.
+  server-headers-suppressed       live  on     major   \`Server\` and \`X-Powered-By\` headers absent or generic (no version info).
+  spf-record                      live  on     major   SPF TXT record is present at the configured domain. Self-skips when \`email-auth.enabled\` is false.
+  ssl-not-expiring                live  on     major   TLS certificate does not expire within the configured warning window (\`ssl-expiry-warning-days\`).
+  ssl-valid                       live  on     critical TLS certificate is valid and trusted by the system root store.
+  x-content-type-options-nosniff  live  on     major   Header equals \`nosniff\`.
+
+performance (10)
+  id                              mode  default severity description
+  compression-enabled             live  on     major   Sends request with \`Accept-Encoding: gzip, br\`; checks \`Content-Encoding\` in response.
+  core-web-vital-cls              live  on     major   Cumulative Layout Shift is below the \`cls\` threshold (default 0.1).
+  core-web-vital-inp              live  on     major   Interaction to Next Paint is below the \`inp\` threshold (default 200ms).
+  core-web-vital-lcp              live  on     major   Largest Contentful Paint is below the \`lcp\` threshold (default 2500ms).
+  font-preload-and-display-swap   live  on     minor   Checks \`<link rel="preload" as="font">\` for primary fonts; fetches CSS, scans for \`font-display: swap\`.
+  lighthouse-accessibility-score  live  on     major   Lighthouse Accessibility category score is at or above the \`lighthouse-accessibility\` threshold (default 90).
+  lighthouse-best-practices-score live  on     major   Lighthouse Best Practices category score is at or above the \`lighthouse-best-practices\` threshold (default 90).
+  lighthouse-performance-score    live  on     major   Lighthouse Performance category score is at or above the \`lighthouse-performance\` threshold (default 90).
+  lighthouse-seo-score            live  on     major   Lighthouse SEO category score is at or above the \`lighthouse-seo\` threshold (default 90).
+  static-asset-cache-headers      live  on     minor   Extracts \`<script>\`, \`<link rel="stylesheet">\`, \`<img>\` URLs from DOM; HEAD each; checks \`Cache-Control\` is long-lived (max-age ≥ 86400). Emits one consolidated result per asset class.
+
+seo (11)
+  id                              mode  default severity description
+  canonical-url                   live  on     major   \`<link rel="canonical" href="...">\` exists.
+  favicon-present                 live  on     minor   \`<link rel="icon">\` in DOM OR \`/favicon.ico\` returns 200.
+  heading-hierarchy               live  on     minor   Walks heading tree, flags level jumps (e.g., h2 → h4).
+  meta-description-present        live  on     major   \`<meta name="description">\` exists, non-empty, length 50–160 (warn outside).
+  open-graph-tags                 live  on     minor   All three \`<meta property="og:*">\` tags present. Multi-result: one per missing tag.
+  robots-txt-accessible           live  on     major   GET \`/robots.txt\`; expects 200; warns if \`Disallow: /\` is set.
+  single-h1                       live  on     major   Count of \`<h1>\` elements === 1.
+  sitemap-xml-accessible          live  on     major   GET \`/sitemap.xml\`; expects 200 + valid XML.
+  structured-data                 live  on     minor   At least one \`<script type="application/ld+json">\` block with parseable JSON.
+  title-tag-present               live  on     major   \`<title>\` exists, non-empty, length 10–60 chars (warn outside range).
+  twitter-card-tags               live  on     minor   \`<meta name="twitter:card">\` and at least one of \`twitter:title\`/\`twitter:description\`. Multi-result: one per missing tag.
+
+accessibility (6)
+  id                              mode  default severity description
+  a11y-aria-valid                 live  on     major   ARIA attributes are used correctly. Consolidates all axe \`aria-*\` rules.
+  a11y-color-contrast             live  on     major   Text color contrast meets WCAG AA. Axe rule: \`color-contrast\`.
+  a11y-focus-states               live  on     major   Interactive elements have visible focus states. Axe rules: \`focus-order-semantics\`, \`focusable-content\`.
+  a11y-image-alt-text             live  on     major   All images have alternative text. Axe rules: \`image-alt\`, \`area-alt\`, \`input-image-alt\`.
+  a11y-keyboard-tab-order         live  on     major   Logical tab order for keyboard navigation. Axe rules: \`tabindex\`, \`landmark-*\` (partial signal — axe cannot fully verify keyboard nav).
+  a11y-touch-targets              live  on     minor   Touch targets are at least 44×44px. Axe rule: \`target-size\`.
+
+deployment (4)
+  id                              mode  default severity description
+  ci-config-exists                static on     minor   Detects \`.github/workflows/\`, \`.gitlab-ci.yml\`, \`circleci/config.yml\`, \`Jenkinsfile\`, or \`.buildkite/\`.
+  env-example-exists              static on     minor   Detects presence of any \`.env*example\` or \`.env*template\` file in projectDir.
+  health-endpoint-responds        live  on     major   Tries each configured path; passes if any returns 2xx; warns if all return 404; fails if all return 5xx or unreachable.
+  not-found-returns-404           live  on     minor   GETs a deliberately bad path (\`/__launchcheck-404-probe\`); expects status 404, not 200-with-error-page.
+
+documentation (1)
+  id                              mode  default severity description
+  readme-required-sections        static on     minor   Checks \`<projectDir>/README.md\` exists; scans for headings matching \`Setup\`/\`Install\`, \`Environment\`/\`Configuration\`, \`Usage\`. Configurable via \`readme-sections.requiredHeadings\`.
+"
+`;
