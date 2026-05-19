@@ -1,8 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import {
-  ResourceDependencyFailedError,
-  ResourceUnavailableError,
-} from '../../../types/index.js';
+import { ResourceDependencyFailedError, ResourceUnavailableError } from '../../../types/index.js';
 import { resolveResource } from '../resolve-resource.js';
 import { TestResource } from './test-resource.js';
 

@@ -1,7 +1,7 @@
 import {
   type Resource,
-  type ResourceOutcome,
   ResourceDependencyFailedError,
+  type ResourceOutcome,
   ResourceUnavailableError,
 } from '../../types/index.js';
 
