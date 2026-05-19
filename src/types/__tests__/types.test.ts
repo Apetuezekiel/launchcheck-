@@ -11,6 +11,7 @@ import type {
   CombinedCheckContext,
   DnsResolver,
   DomElement,
+  EmailAuthOptions,
   HttpClient,
   HttpHeaders,
   HttpRequestInit,
@@ -30,6 +31,9 @@ import type {
   Resource,
   ResourceOutcome,
   ResultStatus,
+  SecretPattern,
+  SecretPatternSeverity,
+  SecretScanOptions,
   Severity,
   StaticCheckContext,
   TlsResult,
@@ -52,6 +56,7 @@ type _PublicSurface = {
   combinedCheckContext: CombinedCheckContext;
   dnsResolver: DnsResolver;
   domElement: DomElement;
+  emailAuthOptions: EmailAuthOptions;
   httpClient: HttpClient;
   httpHeaders: HttpHeaders;
   httpRequestInit: HttpRequestInit;
@@ -71,6 +76,9 @@ type _PublicSurface = {
   resource: Resource<string>;
   resourceOutcome: ResourceOutcome<string>;
   resultStatus: ResultStatus;
+  secretPattern: SecretPattern;
+  secretPatternSeverity: SecretPatternSeverity;
+  secretScanOptions: SecretScanOptions;
   severity: Severity;
   staticCheckContext: StaticCheckContext;
   tlsResult: TlsResult;
@@ -100,4 +108,36 @@ test('error classes are constructible at runtime', () => {
   expect(cascade.resourceName).toBe('lighthouse');
   expect(cascade.failedDependency).toBe('chrome');
   expect(cascade.originalError).toBe(original);
+});
+
+test('ResourceDependencyFailedError.from() normalizes unknown cause shapes', () => {
+  // Error instance — passes through unchanged.
+  const original = new Error('boom');
+  const fromError = ResourceDependencyFailedError.from('lighthouse', 'chrome', original);
+  expect(fromError).toBeInstanceOf(Error);
+  expect(fromError).toBeInstanceOf(ResourceDependencyFailedError);
+  expect(fromError.name).toBe('ResourceDependencyFailedError');
+  expect(fromError.originalError).toBeInstanceOf(Error);
+  expect(fromError.originalError).toBe(original);
+  expect(fromError.resourceName).toBe('lighthouse');
+  expect(fromError.failedDependency).toBe('chrome');
+
+  // String cause — wrapped in new Error(cause).
+  const fromString = ResourceDependencyFailedError.from('axe', 'chrome', 'raw cause');
+  expect(fromString).toBeInstanceOf(Error);
+  expect(fromString).toBeInstanceOf(ResourceDependencyFailedError);
+  expect(fromString.name).toBe('ResourceDependencyFailedError');
+  expect(fromString.originalError).toBeInstanceOf(Error);
+  expect(fromString.originalError.message).toBe('raw cause');
+  expect(fromString.resourceName).toBe('axe');
+  expect(fromString.failedDependency).toBe('chrome');
+
+  // Plain object cause — JSON-serialized into the wrapped Error message.
+  const fromObject = ResourceDependencyFailedError.from('tls', 'dns', { code: 'EFOO' });
+  expect(fromObject).toBeInstanceOf(Error);
+  expect(fromObject).toBeInstanceOf(ResourceDependencyFailedError);
+  expect(fromObject.name).toBe('ResourceDependencyFailedError');
+  expect(fromObject.originalError).toBeInstanceOf(Error);
+  expect(fromObject.resourceName).toBe('tls');
+  expect(fromObject.failedDependency).toBe('dns');
 });
