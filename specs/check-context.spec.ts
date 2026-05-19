@@ -704,8 +704,14 @@ export interface Checker {
    * for v1 — the lazy-by-get semantics of Resource<T> already prevent unused
    * resources from being computed. Reserved for future use (e.g., orchestrator
    * could pre-warm shared resources for parallel batches).
+   *
+   * 'http' signals that the checker uses ad-hoc HttpClient.fetch() (e.g., for
+   * /sitemap.xml, /robots.txt, /favicon.ico). It does not refer to a
+   * first-class Resource<T> — there is no shared `http` resource — but it
+   * lets the orchestrator and `launchcheck list` CLI treat ad-hoc HTTP
+   * consumption uniformly alongside the first-class Resource<T> consumers.
    */
-  consumes?: Array<'rootResponse' | 'dom' | 'lighthouse' | 'axe' | 'tls' | 'dns'>;
+  consumes?: Array<'rootResponse' | 'dom' | 'lighthouse' | 'axe' | 'tls' | 'dns' | 'http'>;
 
   /**
    * Execute the check. Must return an array of results (one checker -> N
