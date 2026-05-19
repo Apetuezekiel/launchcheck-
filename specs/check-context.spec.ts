@@ -277,9 +277,19 @@ export interface ProjectContext {
 
   /**
    * Absolute path to the git repository root, if projectDir is inside a git
-   * repo. Null otherwise. Resolved once at startup via `git rev-parse`.
-   * Checkers that scan git history (lockfile committed, large files in history)
-   * must use this, not projectDir, and must skip with a clear message when null.
+   * repo. Null otherwise. Resolved once at startup via
+   * `git -C projectDir rev-parse --show-toplevel`.
+   *
+   * Three cases:
+   *   - gitRoot === projectDir: projectDir IS the repo root.
+   *   - gitRoot !== projectDir && gitRoot !== null: projectDir is a
+   *     subdirectory of a larger repo (monorepo subpackage). Git-dependent
+   *     checkers MUST scope their queries to projectDir
+   *     (e.g., `git -C gitRoot ls-files -- <projectDir>/package-lock.json`),
+   *     not the whole repo.
+   *   - gitRoot === null: projectDir is not in a git repo, OR the `git`
+   *     binary is unavailable. Git-dependent checkers MUST emit
+   *     status: 'skip' with a message naming the cause.
    */
   gitRoot: string | null;
 
