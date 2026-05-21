@@ -126,9 +126,8 @@ export type ResourceOutcome<T> =
 /**
  * Type signature for the orchestrator-provided resource resolver. The
  * concrete implementation is provided by the orchestrator at runtime and
- * lives in src/runtime/resolve-resource.ts (created during the orchestrator
- * task). The signature is exported here so checker code can be typed
- * against it before the implementation lands.
+ * lives in src/internal/runtime/resolve-resource.ts. Internal — not
+ * re-exported through the public package surface.
  */
 export type ResolveResource = <T>(
   resource: Resource<T>,
