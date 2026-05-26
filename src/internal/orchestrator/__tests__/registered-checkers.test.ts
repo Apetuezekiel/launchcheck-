@@ -26,9 +26,7 @@ describe('validateCheckerRegistration', () => {
       mode: 'static',
       run: async () => [],
     };
-    expect(() => validateCheckerRegistration([bogus])).toThrowError(
-      /no matching RegistryEntry/,
-    );
+    expect(() => validateCheckerRegistration([bogus])).toThrowError(/no matching RegistryEntry/);
   });
 
   test('throws when a checker category does not match its RegistryEntry', () => {
