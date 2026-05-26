@@ -20,7 +20,13 @@ describe('formatTerminal', () => {
   });
 
   test('single pass result renders PASS glyph, severity, and message', () => {
-    const r = makeResult({ checkerId: 'console-log-scan', resultId: 'ok', status: 'pass', severity: 'minor', message: 'All clean.' });
+    const r = makeResult({
+      checkerId: 'console-log-scan',
+      resultId: 'ok',
+      status: 'pass',
+      severity: 'minor',
+      message: 'All clean.',
+    });
     const out = formatTerminal([r]);
     expect(out).toContain('PASS');
     expect(out).toContain('[minor]');
@@ -28,7 +34,13 @@ describe('formatTerminal', () => {
   });
 
   test('single fail result renders FAIL glyph, severity, and message', () => {
-    const r = makeResult({ checkerId: 'console-log-scan', resultId: 'no-console-statements', status: 'fail', severity: 'major', message: 'Found 3 statement(s).' });
+    const r = makeResult({
+      checkerId: 'console-log-scan',
+      resultId: 'no-console-statements',
+      status: 'fail',
+      severity: 'major',
+      message: 'Found 3 statement(s).',
+    });
     const out = formatTerminal([r]);
     expect(out).toContain('FAIL');
     expect(out).toContain('[major]');
@@ -85,7 +97,11 @@ describe('formatTerminal', () => {
   });
 
   test('renders Math.round(durationMs) when set; omits the ms segment when absent', () => {
-    const withDuration = makeResult({ checkerId: 'console-log-scan', resultId: 'a', durationMs: 42.7 });
+    const withDuration = makeResult({
+      checkerId: 'console-log-scan',
+      resultId: 'a',
+      durationMs: 42.7,
+    });
     const withoutDuration = makeResult({ checkerId: 'console-log-scan', resultId: 'b' });
     const outWith = formatTerminal([withDuration]);
     const outWithout = formatTerminal([withoutDuration]);
@@ -96,7 +112,11 @@ describe('formatTerminal', () => {
   test('groups results by category in canonical registry order', () => {
     // Registry order: code-quality (1st), security (3rd), seo (5th)
     const seo = makeResult({ checkerId: 'meta-description', resultId: 'ok', category: 'seo' });
-    const cq = makeResult({ checkerId: 'console-log-scan', resultId: 'ok', category: 'code-quality' });
+    const cq = makeResult({
+      checkerId: 'console-log-scan',
+      resultId: 'ok',
+      category: 'code-quality',
+    });
     const sec = makeResult({ checkerId: 'security-headers', resultId: 'ok', category: 'security' });
     // Intentionally scrambled input order: seo, code-quality, security
     const out = formatTerminal([seo, cq, sec]);
@@ -113,7 +133,12 @@ describe('formatTerminal', () => {
   test('orders results within a category: fail > warn > skip > pass', () => {
     const pass = makeResult({ checkerId: 'console-log-scan', resultId: 'pass', status: 'pass' });
     const skip = makeResult({ checkerId: 'console-log-scan', resultId: 'skip', status: 'skip' });
-    const warn = makeResult({ checkerId: 'console-log-scan', resultId: 'warn', status: 'warn', severity: 'minor' });
+    const warn = makeResult({
+      checkerId: 'console-log-scan',
+      resultId: 'warn',
+      status: 'warn',
+      severity: 'minor',
+    });
     const fail = makeResult({ checkerId: 'console-log-scan', resultId: 'fail', status: 'fail' });
     // Input order: pass, skip, warn, fail — expect rendered order: fail, warn, skip, pass
     const out = formatTerminal([pass, skip, warn, fail]);
@@ -128,7 +153,11 @@ describe('formatTerminal', () => {
   });
 
   test('unknown categories appear after known ones, alphabetical', () => {
-    const known = makeResult({ checkerId: 'console-log-scan', resultId: 'ok', category: 'code-quality' });
+    const known = makeResult({
+      checkerId: 'console-log-scan',
+      resultId: 'ok',
+      category: 'code-quality',
+    });
     const unknown = makeResult({
       checkerId: 'some-checker',
       resultId: 'ok',
@@ -143,13 +172,26 @@ describe('formatTerminal', () => {
   });
 
   test('color: false produces output free of ANSI escape sequences (no \\x1b[)', () => {
-    const r = makeResult({ checkerId: 'console-log-scan', resultId: 'ok', status: 'fail', severity: 'major', message: 'msg' });
+    const r = makeResult({
+      checkerId: 'console-log-scan',
+      resultId: 'ok',
+      status: 'fail',
+      severity: 'major',
+      message: 'msg',
+    });
     const out = formatTerminal([r], { color: false });
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: ESC is the exact character we need to detect
     expect(out).not.toMatch(/\x1b\[/);
   });
 
   test('color: true wraps FAIL with the red ANSI sequence \\x1b[31m', () => {
-    const r = makeResult({ checkerId: 'console-log-scan', resultId: 'ok', status: 'fail', severity: 'major', message: 'msg' });
+    const r = makeResult({
+      checkerId: 'console-log-scan',
+      resultId: 'ok',
+      status: 'fail',
+      severity: 'major',
+      message: 'msg',
+    });
     const out = formatTerminal([r], { color: true });
     expect(out).toContain('\x1b[31mFAIL\x1b[0m');
   });
@@ -159,7 +201,12 @@ describe('formatTerminal', () => {
       makeResult({ checkerId: 'console-log-scan', resultId: 'a', status: 'pass' }),
       makeResult({ checkerId: 'console-log-scan', resultId: 'b', status: 'pass' }),
       makeResult({ checkerId: 'console-log-scan', resultId: 'c', status: 'fail' }),
-      makeResult({ checkerId: 'console-log-scan', resultId: 'd', status: 'warn', severity: 'minor' }),
+      makeResult({
+        checkerId: 'console-log-scan',
+        resultId: 'd',
+        status: 'warn',
+        severity: 'minor',
+      }),
       makeResult({ checkerId: 'console-log-scan', resultId: 'e', status: 'skip' }),
     ];
     const out = formatTerminal(results);
