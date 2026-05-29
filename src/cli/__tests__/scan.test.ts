@@ -33,7 +33,10 @@ afterEach(async () => {
 
 describe('runScan', () => {
   test('exit 0 on a clean project (no source files have console.* or debugger)', async () => {
-    const dir = await project({ 'src/clean.ts': 'export const x = 1;\n' });
+    const dir = await project({
+      'src/clean.ts': 'export const x = 1;\n',
+      '.env.example': 'FOO=bar\n',
+    });
     const result = await runScan({ projectDir: dir });
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe('');
@@ -74,6 +77,7 @@ describe('runScan', () => {
   test('.launchcheckrc disabling console-log-scan suppresses the fail (exit 0)', async () => {
     const dir = await project({
       'src/dirty.ts': 'export const x = 1;\nconsole.log("hi");\n',
+      '.env.example': 'FOO=bar\n',
       '.launchcheckrc': JSON.stringify({ checkers: { 'console-log-scan': false } }),
     });
     const result = await runScan({ projectDir: dir });
@@ -84,6 +88,7 @@ describe('runScan', () => {
   test('.launchcheckrc ignore patterns prevent matching files from being scanned', async () => {
     const dir = await project({
       'lib/dirty.ts': 'export const x = 1;\nconsole.log("hi");\n',
+      '.env.example': 'FOO=bar\n',
       '.launchcheckrc': JSON.stringify({ ignore: ['lib/**'] }),
     });
     const result = await runScan({ projectDir: dir });
@@ -179,7 +184,10 @@ describe('runScan', () => {
     // `__preflight__/git-available` check. A non-git project is scanned
     // normally with no preflight skip. When git preflight ships, this
     // test must be updated to assert the preflight-result emission.
-    const dir = await project({ 'src/clean.ts': 'export const x = 1;\n' });
+    const dir = await project({
+      'src/clean.ts': 'export const x = 1;\n',
+      '.env.example': 'FOO=bar\n',
+    });
     const result = await runScan({ projectDir: dir });
     expect(result.exitCode).toBe(0);
     // No preflight result names leak into the output.
