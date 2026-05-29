@@ -1,4 +1,5 @@
 import type { Checker } from '../../types/index.js';
+import { ciConfigExistsChecker } from '../checkers/ci-config-exists.js';
 import { consoleLogScanChecker } from '../checkers/console-log-scan.js';
 import { envExampleExistsChecker } from '../checkers/env-example-exists.js';
 import { gitignoreCoverageChecker } from '../checkers/gitignore-coverage.js';
@@ -18,6 +19,7 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   todoFixmeScanChecker,
   gitignoreCoverageChecker,
   envExampleExistsChecker,
+  ciConfigExistsChecker,
 ]);
 
 /**
