@@ -122,7 +122,10 @@ describe('run (CLI argv → subcommand wiring)', () => {
   });
 
   test('scan subcommand: clean project routes through to process.exit(0)', async () => {
-    const dir = await project({ 'src/clean.ts': 'export const x = 1;\n' });
+    const dir = await project({
+      'src/clean.ts': 'export const x = 1;\n',
+      '.env.example': 'FOO=bar\n',
+    });
     const code = await runAndCaptureExit(['node', 'launchcheck', 'scan', '--project-dir', dir]);
     expect(code).toBe(0);
     expect(io.stdout.join('')).toContain('Summary:');
