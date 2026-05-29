@@ -121,4 +121,69 @@ describe('runScan', () => {
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toContain('src/dirty.ts');
   });
+
+  test('multi-emit: gitignore-coverage emits N fail results through the full scan pipeline', async () => {
+    // gitignore-coverage emits one result per missing required-pattern
+    // category. A .gitignore that only covers node_modules leaves
+    // multiple categories uncovered — exercising the multi-emit
+    // pipeline through the full CLI (orchestrator + terminal reporter).
+    const dir = await project({
+      'src/clean.ts': 'export const x = 1;\n',
+      '.gitignore': 'node_modules\n',
+    });
+    const result = await runScan({ projectDir: dir });
+    expect(result.exitCode).toBe(1);
+    const failCount = (result.stdout.match(/FAIL/g) ?? []).length;
+    expect(failCount).toBeGreaterThan(1);
+    // Each missing category has a stable resultId of the form `missing-<id>`.
+    expect(result.stdout).toMatch(/missing-/);
+  });
+
+  test('exit 2 when a critical-severity fail flows through the full scan pipeline', async () => {
+    // No currently-implemented static checker can emit a critical-fail
+    // on demand, so we route a synthetic critical fail through the
+    // test-only checkers seam. validateCheckerRegistration accepts the
+    // stub because secret-scan exists in the registry with the same
+    // category/mode/maxSeverity. Once a real checker can emit critical,
+    // rewrite this test against it.
+    const dir = await project({ 'src/clean.ts': 'export const x = 1;\n' });
+    const result = await runScan({
+      projectDir: dir,
+      checkers: [
+        {
+          id: 'secret-scan',
+          name: 'secret-scan',
+          category: 'security',
+          mode: 'static',
+          run: async () => [
+            {
+              checkerId: 'secret-scan',
+              resultId: 'simulated-leak',
+              status: 'fail',
+              severity: 'critical',
+              category: 'security',
+              message: 'simulated critical fail',
+              fix: 'remove the secret',
+            },
+          ],
+        },
+      ],
+    });
+    expect(result.exitCode).toBe(2);
+    expect(result.stdout).toContain('FAIL');
+    expect(result.stdout).toContain('secret-scan/simulated-leak');
+  });
+
+  test('non-git project is still scanned end-to-end (records absence of git preflight)', async () => {
+    // Documents current behavior: launchcheck does not yet implement a
+    // `__preflight__/git-available` check. A non-git project is scanned
+    // normally with no preflight skip. When git preflight ships, this
+    // test must be updated to assert the preflight-result emission.
+    const dir = await project({ 'src/clean.ts': 'export const x = 1;\n' });
+    const result = await runScan({ projectDir: dir });
+    expect(result.exitCode).toBe(0);
+    // No preflight result names leak into the output.
+    expect(result.stdout).not.toContain('git-available');
+    expect(result.stdout).not.toContain('__preflight__');
+  });
 });

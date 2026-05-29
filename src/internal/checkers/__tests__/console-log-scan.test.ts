@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { findById } from '../../registry/index.js';
 import { consoleLogScanChecker } from '../console-log-scan.js';
 import { makeProjectContext, makeStaticContext } from './context.js';
@@ -178,5 +178,35 @@ describe('consoleLogScanChecker', () => {
     controller.abort();
     const [result] = await runChecker(controller.signal);
     expect(result?.status).toBe('skip');
+  });
+
+  test('aborts mid-run when ctx.signal aborts during a readText call', async () => {
+    // Pressure-tests the in-loop `if (ctx.signal.aborted)` check inside
+    // the file iteration. Without it, the checker would keep reading
+    // every file after abort and only return at the end. With it, the
+    // next iteration after abort short-circuits to a skip.
+    await write('src/a.ts', "console.log('a');\n");
+    await write('src/b.ts', "console.log('b');\n");
+    await write('src/c.ts', "console.log('c');\n");
+
+    const controller = new AbortController();
+    const project = makeProjectContext(root);
+    const ctx = makeStaticContext(project, controller.signal);
+
+    const originalReadText = project.fs.readText.bind(project.fs);
+    let reads = 0;
+    vi.spyOn(project.fs, 'readText').mockImplementation(async (p: string) => {
+      reads += 1;
+      const content = await originalReadText(p);
+      if (reads === 1) controller.abort();
+      return content;
+    });
+
+    const [result] = await consoleLogScanChecker.run(ctx);
+    expect(result?.status).toBe('skip');
+    expect(result?.message).toMatch(/aborted/i);
+    // Exactly one read happened; iteration short-circuited before the
+    // second and third files.
+    expect(reads).toBe(1);
   });
 });
