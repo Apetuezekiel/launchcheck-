@@ -3,6 +3,7 @@ import { ciConfigExistsChecker } from '../checkers/ci-config-exists.js';
 import { consoleLogScanChecker } from '../checkers/console-log-scan.js';
 import { envExampleExistsChecker } from '../checkers/env-example-exists.js';
 import { gitignoreCoverageChecker } from '../checkers/gitignore-coverage.js';
+import { lockfileCommittedChecker } from '../checkers/lockfile-committed.js';
 import { readmeRequiredSectionsChecker } from '../checkers/readme-required-sections.js';
 import { todoFixmeScanChecker } from '../checkers/todo-fixme-scan.js';
 import { findById } from '../registry/index.js';
@@ -22,6 +23,7 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   envExampleExistsChecker,
   ciConfigExistsChecker,
   readmeRequiredSectionsChecker,
+  lockfileCommittedChecker,
 ]);
 
 /**
