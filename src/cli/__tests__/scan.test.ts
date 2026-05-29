@@ -36,6 +36,7 @@ describe('runScan', () => {
     const dir = await project({
       'src/clean.ts': 'export const x = 1;\n',
       '.env.example': 'FOO=bar\n',
+      '.github/workflows/ci.yml': 'on: push\n',
     });
     const result = await runScan({ projectDir: dir });
     expect(result.exitCode).toBe(0);
@@ -78,6 +79,7 @@ describe('runScan', () => {
     const dir = await project({
       'src/dirty.ts': 'export const x = 1;\nconsole.log("hi");\n',
       '.env.example': 'FOO=bar\n',
+      '.github/workflows/ci.yml': 'on: push\n',
       '.launchcheckrc': JSON.stringify({ checkers: { 'console-log-scan': false } }),
     });
     const result = await runScan({ projectDir: dir });
@@ -89,6 +91,7 @@ describe('runScan', () => {
     const dir = await project({
       'lib/dirty.ts': 'export const x = 1;\nconsole.log("hi");\n',
       '.env.example': 'FOO=bar\n',
+      '.github/workflows/ci.yml': 'on: push\n',
       '.launchcheckrc': JSON.stringify({ ignore: ['lib/**'] }),
     });
     const result = await runScan({ projectDir: dir });
@@ -187,6 +190,7 @@ describe('runScan', () => {
     const dir = await project({
       'src/clean.ts': 'export const x = 1;\n',
       '.env.example': 'FOO=bar\n',
+      '.github/workflows/ci.yml': 'on: push\n',
     });
     const result = await runScan({ projectDir: dir });
     expect(result.exitCode).toBe(0);

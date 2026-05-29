@@ -125,6 +125,7 @@ describe('run (CLI argv → subcommand wiring)', () => {
     const dir = await project({
       'src/clean.ts': 'export const x = 1;\n',
       '.env.example': 'FOO=bar\n',
+      '.github/workflows/ci.yml': 'on: push\n',
     });
     const code = await runAndCaptureExit(['node', 'launchcheck', 'scan', '--project-dir', dir]);
     expect(code).toBe(0);
