@@ -2,10 +2,13 @@ import * as path from 'node:path';
 import type { Command } from 'commander';
 import { ConfigError, type RawConfig, loadConfigFile } from '../../internal/config/load.js';
 import { resolveConfig } from '../../internal/config/resolve.js';
-import { runStaticChecks } from '../../internal/orchestrator/run-static.js';
+import {
+  type RunStaticChecksOptions,
+  runStaticChecks,
+} from '../../internal/orchestrator/run-static.js';
 import { computeExitCode } from '../../internal/reporter/exit-code.js';
 import { formatTerminal } from '../../internal/reporter/terminal.js';
-import type { CheckResult } from '../../types/index.js';
+import type { CheckResult, Checker } from '../../types/index.js';
 
 /** Options for runScan. */
 export interface ScanOptions {
@@ -13,6 +16,13 @@ export interface ScanOptions {
   projectDir?: string;
   /** ANSI colors in stdout. Default: false. */
   color?: boolean;
+  /**
+   * Overrides ALL_CHECKERS in the orchestrator. Test-only seam mirroring
+   * runStaticChecks.checkers. Production callers omit it. When provided,
+   * each checker is still validated against the registry by the
+   * orchestrator before dispatch.
+   */
+  checkers?: ReadonlyArray<Checker>;
 }
 
 /** Output of runScan — three discrete streams the CLI wrapper writes. */
@@ -52,7 +62,11 @@ export async function runScan(options: ScanOptions = {}): Promise<ScanResult> {
 
   let results: CheckResult[];
   try {
-    results = await runStaticChecks({ projectDir, config });
+    const orchestratorOptions: RunStaticChecksOptions = { projectDir, config };
+    if (options.checkers !== undefined) {
+      orchestratorOptions.checkers = options.checkers;
+    }
+    results = await runStaticChecks(orchestratorOptions);
   } catch (err) {
     return { stdout: '', stderr: formatGenericError(err), exitCode: 2 };
   }
