@@ -8,8 +8,34 @@ describe('runList', () => {
     chalk.level = 0;
   });
 
-  test('default terminal output matches snapshot', () => {
-    expect(runList({})).toMatchSnapshot();
+  test('default terminal output: header line + all 8 category section headers with documented counts', () => {
+    // Previously a full 59-entry snapshot. The full snapshot churned
+    // on every registry description tweak even when the structure was
+    // unchanged; the assertions below cover the layout invariants
+    // (header line, category ordering, per-category count) without
+    // pinning every description line.
+    const out = runList({});
+    expect(out).toMatch(/^launchcheck v[\w.-]+ — checker registry \(59 entries\)\n/);
+
+    const expectedSections: ReadonlyArray<[string, number]> = [
+      ['code-quality', 7],
+      ['dependencies', 5],
+      ['security', 15],
+      ['performance', 10],
+      ['seo', 11],
+      ['accessibility', 6],
+      ['deployment', 4],
+      ['documentation', 1],
+    ];
+    let lastIndex = -1;
+    for (const [cat, count] of expectedSections) {
+      const header = `${cat} (${count})`;
+      const idx = out.indexOf(header);
+      expect(idx, `category header "${header}" not found`).toBeGreaterThan(lastIndex);
+      lastIndex = idx;
+    }
+    // Each section is followed by the column header row.
+    expect(out).toMatch(/code-quality \(7\)\n\s+id\s+mode\s+default\s+severity\s+description/);
   });
 
   test('--json output is valid JSON', () => {

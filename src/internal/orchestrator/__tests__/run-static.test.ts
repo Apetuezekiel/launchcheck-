@@ -363,6 +363,44 @@ describe('runStaticChecks', () => {
     );
   });
 
+  test('durationMs set by the checker is overwritten by the orchestrator', async () => {
+    // Per CheckResult.durationMs documentation, the orchestrator owns
+    // wall-clock timing — a checker that sets durationMs itself must
+    // not influence what the orchestrator reports. Lock the contract:
+    // a fast stub claiming 999_999ms must come back with the
+    // orchestrator's actual measurement (orders of magnitude smaller).
+    const checker = stub({
+      id: 'console-log-scan',
+      category: 'code-quality',
+      mode: 'static',
+      run: async () => [{ ...makeResult('console-log-scan'), durationMs: 999_999 }],
+    });
+    const results = await runStaticChecks({ projectDir: root, checkers: [checker] });
+    expect(results).toHaveLength(1);
+    expect(results[0]?.durationMs).not.toBe(999_999);
+    expect(results[0]?.durationMs).toBeLessThan(60_000);
+  });
+
+  test('every registered checker emits unique resultIds within its own output', async () => {
+    // The spec requires (checkerId, resultId) uniqueness within a single
+    // checker invocation. Runs the real registered checkers against the
+    // (empty) tmp project and asserts the contract end-to-end so a
+    // regression in any one checker's multi-emit logic surfaces here.
+    const results = await runStaticChecks({ projectDir: root });
+    const byChecker = new Map<string, string[]>();
+    for (const r of results) {
+      const arr = byChecker.get(r.checkerId);
+      if (arr !== undefined) {
+        arr.push(r.resultId);
+      } else {
+        byChecker.set(r.checkerId, [r.resultId]);
+      }
+    }
+    for (const [, resultIds] of byChecker) {
+      expect(new Set(resultIds).size).toBe(resultIds.length);
+    }
+  });
+
   test('a thrown checker does not abort the run — other checkers still complete', async () => {
     const thrower = stub({
       id: 'console-log-scan',
