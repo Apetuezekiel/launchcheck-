@@ -1,5 +1,6 @@
 import type { Checker } from '../../types/index.js';
 import { consoleLogScanChecker } from '../checkers/console-log-scan.js';
+import { todoFixmeScanChecker } from '../checkers/todo-fixme-scan.js';
 import { findById } from '../registry/index.js';
 
 /**
@@ -10,7 +11,10 @@ import { findById } from '../registry/index.js';
  * Intentionally contains every checker regardless of mode; the orchestrator
  * filters by mode at run time. Frozen to prevent mutation.
  */
-export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([consoleLogScanChecker]);
+export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
+  consoleLogScanChecker,
+  todoFixmeScanChecker,
+]);
 
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry
