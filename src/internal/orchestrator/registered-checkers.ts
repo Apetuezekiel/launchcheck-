@@ -4,10 +4,10 @@ import { consoleLogScanChecker } from '../checkers/console-log-scan.js';
 import { envExampleExistsChecker } from '../checkers/env-example-exists.js';
 import { eslintPassingChecker } from '../checkers/eslint-passing.js';
 import { gitignoreCoverageChecker } from '../checkers/gitignore-coverage.js';
+import { lockfileCommittedChecker } from '../checkers/lockfile-committed.js';
 import { readmeRequiredSectionsChecker } from '../checkers/readme-required-sections.js';
 import { todoFixmeScanChecker } from '../checkers/todo-fixme-scan.js';
 import { findById } from '../registry/index.js';
-
 /**
  * All Checker objects registered at runtime, in canonical order. New
  * checkers append to this list. Each Checker.id MUST have a matching
@@ -24,8 +24,8 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   ciConfigExistsChecker,
   readmeRequiredSectionsChecker,
   eslintPassingChecker,
+  lockfileCommittedChecker,
 ]);
-
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry
  * whose category and mode agree. Throws on drift — a programming error the
