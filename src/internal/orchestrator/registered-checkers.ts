@@ -8,6 +8,7 @@ import { lockfileCommittedChecker } from '../checkers/lockfile-committed.js';
 import { prettierPassingChecker } from '../checkers/prettier-passing.js';
 import { readmeRequiredSectionsChecker } from '../checkers/readme-required-sections.js';
 import { todoFixmeScanChecker } from '../checkers/todo-fixme-scan.js';
+import { typescriptStrictCompileChecker } from '../checkers/typescript-strict-compile.js';
 import { findById } from '../registry/index.js';
 /**
  * All Checker objects registered at runtime, in canonical order. New
@@ -27,6 +28,7 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   eslintPassingChecker,
   lockfileCommittedChecker,
   prettierPassingChecker,
+  typescriptStrictCompileChecker,
 ]);
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry
