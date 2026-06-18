@@ -1,26 +1,65 @@
 # launchcheck
 
-Pre-launch project verification tool.
+Automated pre-launch QA for web projects. `launchcheck` runs a suite of static
+checks — code quality, dependencies, deployment config, and documentation —
+and returns a process exit code you can gate a release or CI job on.
 
-**Status:** pre-alpha, not yet usable.
+> Status: early release (0.1.0). The static-analysis core is functional; the
+> live-check runtime is on the roadmap. See [CHANGELOG.md](./CHANGELOG.md).
 
-## Usage (pre-alpha)
+## Install
 
-The `list` subcommand prints all registered checkers:
+Run without installing:
 
-    node ./bin/launchcheck.mjs list
+    npx launchcheck scan
 
-Filter by category:
+Or add it to a project as a dev dependency:
 
-    node ./bin/launchcheck.mjs list --category security
+    npm install --save-dev launchcheck
 
-JSON output for scripting:
+Requires Node.js >= 18. `typescript` and `puppeteer` are optional peer
+dependencies, pulled in only by the checkers that use them.
 
-    node ./bin/launchcheck.mjs list --json
+## Usage
 
-Once published to npm, the binary will be invokable directly:
+Scan the current directory:
+
+    npx launchcheck scan
+
+Scan a specific project directory, with colors disabled for CI logs:
+
+    npx launchcheck scan --project-dir ./path/to/project --no-color
+
+List the registered checkers (optionally filtered, or as JSON):
 
     npx launchcheck list
+    npx launchcheck list --category code-quality
+    npx launchcheck list --json
 
-**Status:** pre-alpha. Only the `list` subcommand is functional.
-The scanning runtime (static and live checks) is not yet implemented.
+### Exit codes
+
+`scan` exits `2` if any critical check fails, `1` if any check fails, and `0`
+otherwise. Warnings and skipped checks do not affect the exit code.
+
+## Configuration
+
+Drop a `.launchcheckrc` JSON file at the project root to tune behavior:
+
+    {
+      "checkers": { "console-log-scan": false },
+      "thresholds": { "large-file-bytes": 5242880 },
+      "checkerOptions": {
+        "readme-sections": { "requiredHeadings": ["Install", "Usage"] }
+      },
+      "ignore": ["vendor/**", "**/*.min.js"]
+    }
+
+- `checkers` — enable or disable individual checkers by id.
+- `thresholds` — numeric knobs addressed by well-known keys (e.g.
+  `large-file-bytes`).
+- `checkerOptions` — per-checker option objects.
+- `ignore` — glob patterns excluded from scanning.
+
+## License
+
+MIT © Apetu Ezekiel
