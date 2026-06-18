@@ -55,6 +55,9 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
+    "check:surface": "bash scripts/check-public-surface.sh",
+    "check:secrets": "node scripts/check-no-committed-secrets.mjs",
+    "verify": "bash scripts/verify-checker.sh",
     "prepublishOnly": "npm run build"
   },
   "publishConfig": {
