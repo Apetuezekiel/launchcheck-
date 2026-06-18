@@ -33,7 +33,11 @@
     "test:watch": "vitest",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:surface": "bash scripts/check-public-surface.sh",
+    "check:secrets": "node scripts/check-no-committed-secrets.mjs",
+    "verify": "bash scripts/verify-checker.sh",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "chalk": "5.4.1",
