@@ -4,6 +4,7 @@ import { consoleLogScanChecker } from '../checkers/console-log-scan.js';
 import { envExampleExistsChecker } from '../checkers/env-example-exists.js';
 import { eslintPassingChecker } from '../checkers/eslint-passing.js';
 import { gitignoreCoverageChecker } from '../checkers/gitignore-coverage.js';
+import { largeFilesInGitHistoryChecker } from '../checkers/large-files-in-git-history.js';
 import { lockfileCommittedChecker } from '../checkers/lockfile-committed.js';
 import { prettierPassingChecker } from '../checkers/prettier-passing.js';
 import { readmeRequiredSectionsChecker } from '../checkers/readme-required-sections.js';
@@ -29,6 +30,7 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   lockfileCommittedChecker,
   prettierPassingChecker,
   typescriptStrictCompileChecker,
+  largeFilesInGitHistoryChecker,
 ]);
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry
