@@ -281,34 +281,40 @@ describe('runStaticChecks', () => {
     expect(ctx.config.ignore).toEqual([]);
   });
 
-  test('runs eligible checkers in parallel (total elapsed < sum of per-checker delays)', async () => {
-    // Delays scaled to 200ms each so the parallel-vs-serial gap dwarfs the
-    // ~50-80ms buildProjectContext setup cost on slow filesystems. Serial
-    // execution would be >=400ms of checker time alone; parallel finishes
-    // in ~200ms + setup. A threshold of 350ms cleanly distinguishes them.
-    const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+  test('runs eligible checkers in parallel (peak concurrent invocations >= 2)', async () => {
+    // Counter-based assertion: a shared in-flight counter is incremented on
+    // run() entry and decremented on exit, tracking the peak. Parallel
+    // execution drives peak >= 2 (both checkers in-flight together); serial
+    // would cap peak at 1. Independent of wall-clock timing, so the
+    // assertion does not flake under CPU contention or filesystem jitter —
+    // unlike the prior `elapsed < 350ms` form which tripped on Windows when
+    // buildProjectContext setup ate the budget.
+    let inflight = 0;
+    let peak = 0;
+    const slowRun = async (): Promise<CheckResult[]> => {
+      inflight += 1;
+      peak = Math.max(peak, inflight);
+      try {
+        await new Promise<void>((r) => setTimeout(r, 20));
+      } finally {
+        inflight -= 1;
+      }
+      return [];
+    };
     const a = stub({
       id: 'console-log-scan',
       category: 'code-quality',
       mode: 'static',
-      run: async () => {
-        await sleep(200);
-        return [makeResult('console-log-scan')];
-      },
+      run: slowRun,
     });
     const b = stub({
       id: 'env-example-exists',
       category: 'deployment',
       mode: 'static',
-      run: async () => {
-        await sleep(200);
-        return [makeResult('env-example-exists')];
-      },
+      run: slowRun,
     });
-    const start = Date.now();
     await runStaticChecks({ projectDir: root, checkers: [a, b] });
-    const elapsed = Date.now() - start;
-    expect(elapsed).toBeLessThan(350);
+    expect(peak).toBeGreaterThanOrEqual(2);
   });
 
   test('wraps a thrown checker error: status fail, resultId "__error__", severity critical, category from checker, fix present, durationMs set', async () => {
@@ -355,6 +361,44 @@ describe('runStaticChecks', () => {
       'Checker threw — spec violation; result wrapped as fail',
       { checkerId: 'console-log-scan', error: 'boom' },
     );
+  });
+
+  test('durationMs set by the checker is overwritten by the orchestrator', async () => {
+    // Per CheckResult.durationMs documentation, the orchestrator owns
+    // wall-clock timing — a checker that sets durationMs itself must
+    // not influence what the orchestrator reports. Lock the contract:
+    // a fast stub claiming 999_999ms must come back with the
+    // orchestrator's actual measurement (orders of magnitude smaller).
+    const checker = stub({
+      id: 'console-log-scan',
+      category: 'code-quality',
+      mode: 'static',
+      run: async () => [{ ...makeResult('console-log-scan'), durationMs: 999_999 }],
+    });
+    const results = await runStaticChecks({ projectDir: root, checkers: [checker] });
+    expect(results).toHaveLength(1);
+    expect(results[0]?.durationMs).not.toBe(999_999);
+    expect(results[0]?.durationMs).toBeLessThan(60_000);
+  });
+
+  test('every registered checker emits unique resultIds within its own output', async () => {
+    // The spec requires (checkerId, resultId) uniqueness within a single
+    // checker invocation. Runs the real registered checkers against the
+    // (empty) tmp project and asserts the contract end-to-end so a
+    // regression in any one checker's multi-emit logic surfaces here.
+    const results = await runStaticChecks({ projectDir: root });
+    const byChecker = new Map<string, string[]>();
+    for (const r of results) {
+      const arr = byChecker.get(r.checkerId);
+      if (arr !== undefined) {
+        arr.push(r.resultId);
+      } else {
+        byChecker.set(r.checkerId, [r.resultId]);
+      }
+    }
+    for (const [, resultIds] of byChecker) {
+      expect(new Set(resultIds).size).toBe(resultIds.length);
+    }
   });
 
   test('a thrown checker does not abort the run — other checkers still complete', async () => {

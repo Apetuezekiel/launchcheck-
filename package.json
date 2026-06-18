@@ -1,9 +1,30 @@
 {
   "name": "launchcheck",
-  "version": "0.0.0",
-  "description": "Pre-launch project verification tool.",
+  "version": "0.1.0",
+  "description": "Automated pre-launch QA for web projects: a CLI of static checks for code quality, dependencies, deployment, and documentation.",
   "license": "MIT",
+  "author": "Apetu Ezekiel",
+  "keywords": [
+    "cli",
+    "pre-launch",
+    "prelaunch",
+    "qa",
+    "ci",
+    "static-analysis",
+    "lint",
+    "launch-checklist",
+    "devops"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Apetuezekiel/launchcheck-.git"
+  },
+  "homepage": "https://github.com/Apetuezekiel/launchcheck-#readme",
+  "bugs": {
+    "url": "https://github.com/Apetuezekiel/launchcheck-/issues"
+  },
   "type": "module",
+  "sideEffects": false,
   "engines": {
     "node": ">=18"
   },
@@ -25,7 +46,7 @@
   "bin": {
     "launchcheck": "./bin/launchcheck.mjs"
   },
-  "files": ["dist", "bin", "README.md", "LICENSE"],
+  "files": ["dist", "bin", "README.md", "CHANGELOG.md", "LICENSE"],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -38,6 +59,9 @@
     "check:secrets": "node scripts/check-no-committed-secrets.mjs",
     "verify": "bash scripts/verify-checker.sh",
     "prepublishOnly": "npm run build"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "chalk": "5.4.1",

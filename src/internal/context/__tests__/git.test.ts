@@ -4,7 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { resolveGitRoot } from '../git.js';
+import { isGitTracked, resolveGitRoot } from '../git.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -66,5 +66,63 @@ describe('resolveGitRoot', () => {
     // accepts this assumption.
     const result = await resolveGitRoot(root);
     expect(result).toBeNull();
+  });
+});
+
+describe('isGitTracked', () => {
+  test('returns true for a staged-but-uncommitted file', async () => {
+    if (!(await tryGitInit(root))) return;
+    await fs.writeFile(path.join(root, 'package-lock.json'), '{}\n');
+    await execFileAsync('git', ['-C', root, 'add', 'package-lock.json'], {
+      timeout: 5000,
+      windowsHide: true,
+    });
+    expect(await isGitTracked(root, path.join(root, 'package-lock.json'))).toBe(true);
+  });
+
+  test('returns true when called with a relative path', async () => {
+    if (!(await tryGitInit(root))) return;
+    await fs.writeFile(path.join(root, 'yarn.lock'), '\n');
+    await execFileAsync('git', ['-C', root, 'add', 'yarn.lock'], {
+      timeout: 5000,
+      windowsHide: true,
+    });
+    expect(await isGitTracked(root, 'yarn.lock')).toBe(true);
+  });
+
+  test('returns false for a file that exists on disk but is not staged', async () => {
+    if (!(await tryGitInit(root))) return;
+    await fs.writeFile(path.join(root, 'package-lock.json'), '{}\n');
+    expect(await isGitTracked(root, path.join(root, 'package-lock.json'))).toBe(false);
+  });
+
+  test('returns false for a file that does not exist at all', async () => {
+    if (!(await tryGitInit(root))) return;
+    expect(await isGitTracked(root, path.join(root, 'package-lock.json'))).toBe(false);
+  });
+
+  test('returns false for a path that resolves outside gitRoot', async () => {
+    if (!(await tryGitInit(root))) return;
+    const outside = path.resolve(root, '..', 'definitely-outside.txt');
+    expect(await isGitTracked(root, outside)).toBe(false);
+  });
+
+  test('returns false when called against a non-repo directory (git exits non-zero)', async () => {
+    // No tryGitInit — root has no .git. git ls-files inside fails;
+    // helper swallows the error and returns false.
+    await fs.writeFile(path.join(root, 'package-lock.json'), '{}\n');
+    expect(await isGitTracked(root, 'package-lock.json')).toBe(false);
+  });
+
+  test('returns true for a nested tracked file (resolves through subdirectories)', async () => {
+    if (!(await tryGitInit(root))) return;
+    const nested = path.join(root, 'apps', 'web');
+    await fs.mkdir(nested, { recursive: true });
+    await fs.writeFile(path.join(nested, 'package-lock.json'), '{}\n');
+    await execFileAsync('git', ['-C', root, 'add', 'apps/web/package-lock.json'], {
+      timeout: 5000,
+      windowsHide: true,
+    });
+    expect(await isGitTracked(root, path.join(nested, 'package-lock.json'))).toBe(true);
   });
 });
