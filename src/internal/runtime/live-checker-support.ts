@@ -3,6 +3,7 @@ import type {
   CheckContext,
   CheckResult,
   HttpResponse,
+  ParsedDom,
   Severity,
 } from '../../types/index.js';
 import { resolveResource } from './resolve-resource.js';
@@ -90,4 +91,65 @@ export async function withRootResponse(
     };
   }
   return { kind: 'ok', response: outcome.value };
+}
+
+/** Resolves the shared dom resource, collapsing the common preamble. */
+export type DomOutcome = { kind: 'done'; results: CheckResult[] } | { kind: 'ok'; dom: ParsedDom };
+
+export async function withDom(
+  ctx: CheckContext,
+  checkerId: string,
+  category: CheckCategory,
+  severity: Severity,
+): Promise<DomOutcome> {
+  if (ctx.live === null) {
+    return {
+      kind: 'done',
+      results: [
+        liveResult(
+          checkerId,
+          category,
+          severity,
+          'skip',
+          'no-live-context',
+          'Skipped: no live context (run with --url).',
+        ),
+      ],
+    };
+  }
+  const outcome = await resolveResource(ctx.live.dom, ctx.signal);
+  if (outcome.kind === 'skip') {
+    return {
+      kind: 'done',
+      results: [
+        liveResult(
+          checkerId,
+          category,
+          severity,
+          'skip',
+          'dom-unavailable',
+          `Skipped: ${outcome.reason}`,
+        ),
+      ],
+    };
+  }
+  if (outcome.kind === 'fail') {
+    return {
+      kind: 'done',
+      results: [
+        liveResult(
+          checkerId,
+          category,
+          severity,
+          'fail',
+          'dom-failed',
+          `Failed to load DOM for ${ctx.live.url}: ${outcome.error.message}`,
+          {
+            fix: 'Ensure the URL returns a valid HTML response.',
+          },
+        ),
+      ],
+    };
+  }
+  return { kind: 'ok', dom: outcome.value };
 }

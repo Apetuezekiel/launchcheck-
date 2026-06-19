@@ -5,6 +5,7 @@ import type {
   LiveContext,
   Resource,
 } from '../../../types/index.js';
+import { parseDom } from '../../runtime/parse-dom.js';
 
 /** Minimal case-insensitive, multi-value HttpHeaders over a plain object. */
 export function headersFrom(raw: Record<string, string | string[]>): HttpHeaders {
@@ -71,6 +72,7 @@ interface LiveCtxOptions {
   rootResponse?: Resource<HttpResponse>;
   url?: string;
   signal?: AbortSignal;
+  domHtml?: string;
 }
 
 /** Builds a live-mode CheckContext with a stub rootResponse. No network. */
@@ -83,7 +85,10 @@ export function makeLiveContext(opts: LiveCtxOptions = {}): CheckContext {
     parsedUrl: new URL(url),
     http: { fetch: () => Promise.reject(new Error('not used in test')) },
     rootResponse,
-    dom: unavailableResource('dom test-stub'),
+    dom:
+      opts.domHtml !== undefined
+        ? okResource(parseDom(opts.domHtml))
+        : unavailableResource('dom test-stub'),
     lighthouse: unavailableResource('lighthouse test-stub'),
     axe: unavailableResource('axe test-stub'),
     tls: unavailableResource('tls test-stub'),

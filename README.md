@@ -1,11 +1,12 @@
 # launchcheck
 
 Automated pre-launch QA for web projects. `launchcheck` runs a suite of static
-checks — code quality, security, dependencies, deployment config, and documentation —
+checks — code quality, security, SEO, dependencies, deployment config,
+and documentation —
 and returns a process exit code you can gate a release or CI job on.
 
-> Status: early release (0.2.0). The static-analysis core is functional and
-> live security-header checks are available via `--url`. See [CHANGELOG.md](./CHANGELOG.md).
+> Status: early release (0.3.0). The static-analysis core is functional and
+> live security-header and SEO checks are available via `--url`. See [CHANGELOG.md](./CHANGELOG.md).
 
 ## Install
 

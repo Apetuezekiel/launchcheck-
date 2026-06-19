@@ -1,5 +1,6 @@
 import type { HttpClient, LiveContext } from '../../types/index.js';
 import { DefaultHttpClient } from '../runtime/http-client.js';
+import { DomResource } from '../runtime/resources/dom.js';
 import { PlaceholderDnsResolver, UnavailableResource } from '../runtime/resources/placeholders.js';
 import { RootResponseResource } from '../runtime/resources/root-response.js';
 
@@ -26,12 +27,13 @@ const pending = (resource: string): string =>
 export function buildLiveContext(url: string, deps: BuildLiveContextDeps = {}): BuiltLiveContext {
   const parsedUrl = new URL(url);
   const http = deps.httpClient ?? new DefaultHttpClient();
+  const rootResponse = new RootResponseResource(url, http);
   const live: LiveContext = {
     url,
     parsedUrl,
     http,
-    rootResponse: new RootResponseResource(url, http),
-    dom: new UnavailableResource(pending('dom'), pending('dom')),
+    rootResponse,
+    dom: new DomResource(rootResponse),
     lighthouse: new UnavailableResource(pending('lighthouse'), pending('lighthouse')),
     axe: new UnavailableResource(pending('axe'), pending('axe')),
     tls: new UnavailableResource(pending('tls'), pending('tls')),

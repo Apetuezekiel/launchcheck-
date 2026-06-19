@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-19
+
+### Added
+
+- DOM resource (cheerio-backed) for live mode: parses the primary URL's HTML
+  once per run, shared by SEO and HTML checkers; depends on rootResponse.
+- Eight SEO checkers (live, consume `dom`): `title-tag-present`,
+  `meta-description-present`, `canonical-url`, `single-h1`,
+  `heading-hierarchy`, `structured-data`, `open-graph-tags`,
+  `twitter-card-tags`.
+
+### Dependencies
+
+- Added `cheerio` (HTML parsing for the DOM resource).
+
 ## [0.2.0] - 2026-06-19
 
 ### Added
