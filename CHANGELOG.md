@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-06-19
+
+### Added
+
+- Live-check runtime: `launchcheck scan --url <url>` runs live checks against a
+  URL. `--url` alone runs live mode; `--url` with `--project-dir` runs combined
+  (static + live); no `--url` is static (unchanged). A malformed `--url` is a
+  usage error (exit 2).
+- Seven **security** header checkers (live, consume the shared rootResponse):
+  `hsts-present`, `csp-present`, `x-content-type-options-nosniff`,
+  `referrer-policy-present`, `permissions-policy-present`,
+  `clickjacking-protection`, `server-headers-suppressed`.
+- HTTP client (undici) with manual redirect following and multi-value,
+  case-insensitive header access; shared `rootResponse` resource (one fetch per
+  run). dom / tls / dns / lighthouse / axe are placeholders pending later phases.
+
 ## [0.1.1] - 2026-06-18
 
 Patch release: documentation and packaging corrections. No checker logic changed.

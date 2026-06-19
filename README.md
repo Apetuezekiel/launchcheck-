@@ -4,8 +4,8 @@ Automated pre-launch QA for web projects. `launchcheck` runs a suite of static
 checks — code quality, security, dependencies, deployment config, and documentation —
 and returns a process exit code you can gate a release or CI job on.
 
-> Status: early release (0.1.1). The static-analysis core is functional; the
-> live-check runtime is on the roadmap. See [CHANGELOG.md](./CHANGELOG.md).
+> Status: early release (0.2.0). The static-analysis core is functional and
+> live security-header checks are available via `--url`. See [CHANGELOG.md](./CHANGELOG.md).
 
 ## Install
 
@@ -29,6 +29,16 @@ Scan the current directory:
 Scan a specific project directory, with colors disabled for CI logs:
 
     npx launchcheck scan --project-dir ./path/to/project --no-color
+
+### Live checks
+
+Scan a live URL for security headers, HTTPS configuration, and more:
+
+    npx launchcheck scan --url https://your-site.com
+
+Combine static and live checks (requires both a project directory and a URL):
+
+    npx launchcheck scan --url https://your-site.com --project-dir ./path/to/project
 
 List the registered checkers (optionally filtered, or as JSON):
 
