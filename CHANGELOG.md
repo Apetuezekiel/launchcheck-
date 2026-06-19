@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-06-19
+
+### Added
+
+- Three http-only live checkers (use the shared HTTP client directly, no new
+  resource): `robots-txt-accessible` and `sitemap-xml-accessible` (SEO),
+  and `favicon-present` (SEO; `<link rel="icon">` in the DOM or a 200 from
+  `/favicon.ico`).
+
 ## [0.4.0] - 2026-06-19
 
 ### Added
