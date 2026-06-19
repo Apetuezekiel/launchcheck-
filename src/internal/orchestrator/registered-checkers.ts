@@ -1,16 +1,23 @@
 import type { Checker } from '../../types/index.js';
 import { ciConfigExistsChecker } from '../checkers/ci-config-exists.js';
+import { clickjackingProtectionChecker } from '../checkers/clickjacking-protection.js';
 import { consoleLogScanChecker } from '../checkers/console-log-scan.js';
+import { cspPresentChecker } from '../checkers/csp-present.js';
 import { envExampleExistsChecker } from '../checkers/env-example-exists.js';
 import { eslintPassingChecker } from '../checkers/eslint-passing.js';
 import { gitignoreCoverageChecker } from '../checkers/gitignore-coverage.js';
+import { hstsPresentChecker } from '../checkers/hsts-present.js';
 import { largeFilesInGitHistoryChecker } from '../checkers/large-files-in-git-history.js';
 import { lockfileCommittedChecker } from '../checkers/lockfile-committed.js';
+import { permissionsPolicyPresentChecker } from '../checkers/permissions-policy-present.js';
 import { prettierPassingChecker } from '../checkers/prettier-passing.js';
 import { readmeRequiredSectionsChecker } from '../checkers/readme-required-sections.js';
+import { referrerPolicyPresentChecker } from '../checkers/referrer-policy-present.js';
 import { secretScanChecker } from '../checkers/secret-scan.js';
+import { serverHeadersSuppressedChecker } from '../checkers/server-headers-suppressed.js';
 import { todoFixmeScanChecker } from '../checkers/todo-fixme-scan.js';
 import { typescriptStrictCompileChecker } from '../checkers/typescript-strict-compile.js';
+import { xContentTypeOptionsNosniffChecker } from '../checkers/x-content-type-options-nosniff.js';
 import { findById } from '../registry/index.js';
 /**
  * All Checker objects registered at runtime, in canonical order. New
@@ -33,6 +40,13 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   typescriptStrictCompileChecker,
   largeFilesInGitHistoryChecker,
   secretScanChecker,
+  clickjackingProtectionChecker,
+  cspPresentChecker,
+  hstsPresentChecker,
+  permissionsPolicyPresentChecker,
+  referrerPolicyPresentChecker,
+  serverHeadersSuppressedChecker,
+  xContentTypeOptionsNosniffChecker,
 ]);
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry
