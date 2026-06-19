@@ -1,10 +1,10 @@
 # launchcheck
 
 Automated pre-launch QA for web projects. `launchcheck` runs a suite of static
-checks — code quality, dependencies, deployment config, and documentation —
+checks — code quality, security, dependencies, deployment config, and documentation —
 and returns a process exit code you can gate a release or CI job on.
 
-> Status: early release (0.1.0). The static-analysis core is functional; the
+> Status: early release (0.1.1). The static-analysis core is functional; the
 > live-check runtime is on the roadmap. See [CHANGELOG.md](./CHANGELOG.md).
 
 ## Install

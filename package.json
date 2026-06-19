@@ -1,6 +1,6 @@
 {
   "name": "launchcheck",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Automated pre-launch QA for web projects: a CLI of static checks for code quality, dependencies, deployment, and documentation.",
   "license": "MIT",
   "author": "Apetu Ezekiel",
@@ -44,7 +44,7 @@
     }
   },
   "bin": {
-    "launchcheck": "./bin/launchcheck.mjs"
+    "launchcheck": "bin/launchcheck.mjs"
   },
   "files": ["dist", "bin", "README.md", "CHANGELOG.md", "LICENSE"],
   "scripts": {
