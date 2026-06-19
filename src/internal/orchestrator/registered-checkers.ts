@@ -4,6 +4,8 @@ import { ciConfigExistsChecker } from '../checkers/ci-config-exists.js';
 import { clickjackingProtectionChecker } from '../checkers/clickjacking-protection.js';
 import { consoleLogScanChecker } from '../checkers/console-log-scan.js';
 import { cspPresentChecker } from '../checkers/csp-present.js';
+import { dkimRecordChecker } from '../checkers/dkim-record.js';
+import { dmarcRecordChecker } from '../checkers/dmarc-record.js';
 import { envExampleExistsChecker } from '../checkers/env-example-exists.js';
 import { eslintPassingChecker } from '../checkers/eslint-passing.js';
 import { gitignoreCoverageChecker } from '../checkers/gitignore-coverage.js';
@@ -20,6 +22,9 @@ import { referrerPolicyPresentChecker } from '../checkers/referrer-policy-presen
 import { secretScanChecker } from '../checkers/secret-scan.js';
 import { serverHeadersSuppressedChecker } from '../checkers/server-headers-suppressed.js';
 import { singleH1Checker } from '../checkers/single-h1.js';
+import { spfRecordChecker } from '../checkers/spf-record.js';
+import { sslNotExpiringChecker } from '../checkers/ssl-not-expiring.js';
+import { sslValidChecker } from '../checkers/ssl-valid.js';
 import { structuredDataChecker } from '../checkers/structured-data.js';
 import { titleTagPresentChecker } from '../checkers/title-tag-present.js';
 import { todoFixmeScanChecker } from '../checkers/todo-fixme-scan.js';
@@ -63,6 +68,11 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   structuredDataChecker,
   titleTagPresentChecker,
   twitterCardTagsChecker,
+  sslValidChecker,
+  sslNotExpiringChecker,
+  spfRecordChecker,
+  dmarcRecordChecker,
+  dkimRecordChecker,
 ]);
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry

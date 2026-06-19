@@ -1,9 +1,11 @@
 import type {
   CheckContext,
+  DnsResolver,
   HttpHeaders,
   HttpResponse,
   LiveContext,
   Resource,
+  TlsResult,
 } from '../../../types/index.js';
 import { parseDom } from '../../runtime/parse-dom.js';
 
@@ -73,7 +75,13 @@ interface LiveCtxOptions {
   url?: string;
   signal?: AbortSignal;
   domHtml?: string;
+  tls?: TlsResult;
+  dns?: Partial<DnsResolver>;
+  checkerOptions?: Record<string, unknown>;
+  thresholds?: Record<string, number>;
 }
+
+const dnsStub = (label: string) => () => Promise.reject(new Error(`dns test-stub: ${label}`));
 
 /** Builds a live-mode CheckContext with a stub rootResponse. No network. */
 export function makeLiveContext(opts: LiveCtxOptions = {}): CheckContext {
@@ -91,23 +99,30 @@ export function makeLiveContext(opts: LiveCtxOptions = {}): CheckContext {
         : unavailableResource('dom test-stub'),
     lighthouse: unavailableResource('lighthouse test-stub'),
     axe: unavailableResource('axe test-stub'),
-    tls: unavailableResource('tls test-stub'),
+    tls: opts.tls !== undefined ? okResource(opts.tls) : unavailableResource('tls test-stub'),
     dns: {
-      resolveA: () => Promise.reject(new Error('dns test-stub')),
-      resolveAAAA: () => Promise.reject(new Error('dns test-stub')),
-      resolveTxt: () => Promise.reject(new Error('dns test-stub')),
-      resolveMx: () => Promise.reject(new Error('dns test-stub')),
-      resolveCname: () => Promise.reject(new Error('dns test-stub')),
-      spf: () => Promise.reject(new Error('dns test-stub')),
-      dmarc: () => Promise.reject(new Error('dns test-stub')),
-      dkim: () => Promise.reject(new Error('dns test-stub')),
+      resolveA: opts.dns?.resolveA ?? dnsStub('resolveA'),
+      resolveAAAA: opts.dns?.resolveAAAA ?? dnsStub('resolveAAAA'),
+      resolveTxt: opts.dns?.resolveTxt ?? dnsStub('resolveTxt'),
+      resolveMx: opts.dns?.resolveMx ?? dnsStub('resolveMx'),
+      resolveCname: opts.dns?.resolveCname ?? dnsStub('resolveCname'),
+      spf: opts.dns?.spf ?? dnsStub('spf'),
+      dmarc: opts.dns?.dmarc ?? dnsStub('dmarc'),
+      dkim: opts.dns?.dkim ?? dnsStub('dkim'),
     },
   };
   return {
     mode: 'live',
     project: null,
     live,
-    config: { url, projectDir: null, checkers: {}, thresholds: {}, checkerOptions: {}, ignore: [] },
+    config: {
+      url,
+      projectDir: null,
+      checkers: {},
+      thresholds: opts.thresholds ?? {},
+      checkerOptions: opts.checkerOptions ?? {},
+      ignore: [],
+    },
     logger: {
       debug: () => undefined,
       info: () => undefined,
