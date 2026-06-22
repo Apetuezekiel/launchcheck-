@@ -4,6 +4,7 @@ import { ciConfigExistsChecker } from '../checkers/ci-config-exists.js';
 import { clickjackingProtectionChecker } from '../checkers/clickjacking-protection.js';
 import { compressionEnabledChecker } from '../checkers/compression-enabled.js';
 import { consoleLogScanChecker } from '../checkers/console-log-scan.js';
+import { corsNotWildcardChecker } from '../checkers/cors-not-wildcard.js';
 import { cspPresentChecker } from '../checkers/csp-present.js';
 import { dkimRecordChecker } from '../checkers/dkim-record.js';
 import { dmarcRecordChecker } from '../checkers/dmarc-record.js';
@@ -12,6 +13,7 @@ import { eslintPassingChecker } from '../checkers/eslint-passing.js';
 import { faviconPresentChecker } from '../checkers/favicon-present.js';
 import { gitignoreCoverageChecker } from '../checkers/gitignore-coverage.js';
 import { headingHierarchyChecker } from '../checkers/heading-hierarchy.js';
+import { healthEndpointRespondsChecker } from '../checkers/health-endpoint-responds.js';
 import { hstsPresentChecker } from '../checkers/hsts-present.js';
 import { httpsEnforcementChecker } from '../checkers/https-enforcement.js';
 import { largeFilesInGitHistoryChecker } from '../checkers/large-files-in-git-history.js';
@@ -85,6 +87,8 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   compressionEnabledChecker,
   httpsEnforcementChecker,
   notFoundReturns404Checker,
+  corsNotWildcardChecker,
+  healthEndpointRespondsChecker,
 ]);
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry
