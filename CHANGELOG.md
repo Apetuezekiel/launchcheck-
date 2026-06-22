@@ -13,6 +13,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and `favicon-present` (SEO; `<link rel="icon">` in the DOM or a 200 from
   `/favicon.ico`).
 
+### Fixed
+
+- SSL checkers no longer falsely pass for `http://` URLs: the TLS resource is
+  unavailable (checkers skip) unless the scanned URL is https.
+- `favicon-present` no longer issues a second network request when the page
+  failed to load, avoiding a ~20s double-timeout on unreachable hosts.
+
 ## [0.4.0] - 2026-06-19
 
 ### Added
@@ -20,7 +27,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - TLS resource (`node:tls`) and DNS resolver (`node:dns/promises`) for live mode.
 - Five security checkers (live): `ssl-valid`, `ssl-not-expiring` (consume `tls`);
   `spf-record`, `dmarc-record`, `dkim-record` (consume `dns`, gated by the
-  `email-auth` checker option — `enabled`, `domain`, `dkimSelectors`).
+  `email-auth` checker option â€” `enabled`, `domain`, `dkimSelectors`).
 
 ## [0.3.0] - 2026-06-19
 
@@ -72,19 +79,19 @@ runtime is declared in the registry but not yet implemented.
 
 ### Added
 
-- `launchcheck scan` — runs the enabled static checkers against a project and
+- `launchcheck scan` â€” runs the enabled static checkers against a project and
   reports results with a process exit code (2 on any critical fail, 1 on any
   fail, 0 otherwise).
-- `launchcheck list` — prints the registered checkers; supports `--category`
+- `launchcheck list` â€” prints the registered checkers; supports `--category`
   filtering and `--json` output.
 - Twelve static checkers:
-  - **code-quality** — `console-log-scan`, `todo-fixme-scan`,
+  - **code-quality** â€” `console-log-scan`, `todo-fixme-scan`,
     `gitignore-coverage`, `eslint-passing`, `prettier-passing`,
     `typescript-strict-compile`, `large-files-in-git-history`
-  - **deployment** — `env-example-exists`, `ci-config-exists`
-  - **dependencies** — `lockfile-committed`
-  - **documentation** — `readme-required-sections`
-  - **security** — `secret-scan`
+  - **deployment** â€” `env-example-exists`, `ci-config-exists`
+  - **dependencies** â€” `lockfile-committed`
+  - **documentation** â€” `readme-required-sections`
+  - **security** â€” `secret-scan`
 - Configuration via a `.launchcheckrc` JSON file: per-checker enable/disable,
   `thresholds`, `checkerOptions`, and `ignore` globs.
 - Dual ESM/CJS package with bundled type declarations.

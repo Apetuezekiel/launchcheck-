@@ -38,7 +38,13 @@ export function buildLiveContext(url: string, deps: BuildLiveContextDeps = {}): 
     dom: new DomResource(rootResponse),
     lighthouse: new UnavailableResource(pending('lighthouse'), pending('lighthouse')),
     axe: new UnavailableResource(pending('axe'), pending('axe')),
-    tls: new TlsResource(parsedUrl.hostname, Number(parsedUrl.port) || 443),
+    tls:
+      parsedUrl.protocol === 'https:'
+        ? new TlsResource(parsedUrl.hostname, Number(parsedUrl.port) || 443)
+        : new UnavailableResource(
+            'tls',
+            'TLS not checked: URL scheme is not https (scan the https:// URL).',
+          ),
     dns: new DefaultDnsResolver(),
   };
   return { live, dispose: () => Promise.resolve() };

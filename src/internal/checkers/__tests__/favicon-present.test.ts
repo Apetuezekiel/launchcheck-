@@ -35,4 +35,18 @@ describe('faviconPresentChecker', () => {
     expect(r[0]?.status).toBe('fail');
     expect(r[0]?.resultId).toBe('favicon-missing');
   });
+
+  test('does not issue a second fetch when the DOM is unavailable (Issue B)', async () => {
+    let calls = 0;
+    const http: HttpClient = {
+      fetch: () => {
+        calls += 1;
+        return Promise.resolve(makeHttpResponse({}, { status: 200 }));
+      },
+    };
+    // no domHtml â†’ dom resolves to skip; the checker must not probe /favicon.ico
+    const r = await faviconPresentChecker.run(makeLiveContext({ http }));
+    expect(r[0]?.resultId).toBe('favicon-missing');
+    expect(calls).toBe(0);
+  });
 });

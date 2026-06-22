@@ -25,7 +25,6 @@ export const faviconPresentChecker: Checker = {
         ),
       ];
     }
-    // Prefer a <link rel="icon"> in the DOM.
     const dom = await resolveResource(ctx.live.dom, ctx.signal);
     if (dom.kind === 'ok') {
       const hasIconLink = dom.value.linkTags.some((l) =>
@@ -43,17 +42,33 @@ export const faviconPresentChecker: Checker = {
           ),
         ];
       }
-    }
-    // Fall back to GET /favicon.ico.
-    const target = new URL('/favicon.ico', ctx.live.url).toString();
-    try {
-      const res = await ctx.live.http.fetch(target);
-      if (res.status === 200) {
-        return [liveResult(ID, CAT, SEV, 'pass', 'favicon-file', '/favicon.ico returns 200.')];
+      // DOM loaded but no icon link â€” the host is up, so the /favicon.ico probe
+      // is meaningful and fast. (Only attempted here, never when the DOM failed.)
+      const target = new URL('/favicon.ico', ctx.live.url).toString();
+      try {
+        const res = await ctx.live.http.fetch(target);
+        if (res.status === 200) {
+          return [liveResult(ID, CAT, SEV, 'pass', 'favicon-file', '/favicon.ico returns 200.')];
+        }
+      } catch {
+        // fall through to the missing result
       }
-    } catch {
-      // fall through to the missing result
+      return [
+        liveResult(
+          ID,
+          CAT,
+          SEV,
+          'fail',
+          'favicon-missing',
+          'No <link rel="icon"> and /favicon.ico does not return 200.',
+          {
+            fix: 'Add a <link rel="icon"> or serve /favicon.ico.',
+          },
+        ),
+      ];
     }
+    // DOM unavailable (e.g. the page did not load). Do NOT issue a second
+    // network request â€” it would only add another timeout on a dead host.
     return [
       liveResult(
         ID,
@@ -61,9 +76,9 @@ export const faviconPresentChecker: Checker = {
         SEV,
         'fail',
         'favicon-missing',
-        'No <link rel="icon"> and /favicon.ico does not return 200.',
+        `No favicon could be determined: ${dom.kind === 'skip' ? dom.reason : dom.error.message}`,
         {
-          fix: 'Add a <link rel="icon"> or serve /favicon.ico.',
+          fix: 'Ensure the page loads, then add a <link rel="icon"> or serve /favicon.ico.',
         },
       ),
     ];
