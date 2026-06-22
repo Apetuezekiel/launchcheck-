@@ -2,6 +2,7 @@ import type { Checker } from '../../types/index.js';
 import { canonicalUrlChecker } from '../checkers/canonical-url.js';
 import { ciConfigExistsChecker } from '../checkers/ci-config-exists.js';
 import { clickjackingProtectionChecker } from '../checkers/clickjacking-protection.js';
+import { compressionEnabledChecker } from '../checkers/compression-enabled.js';
 import { consoleLogScanChecker } from '../checkers/console-log-scan.js';
 import { cspPresentChecker } from '../checkers/csp-present.js';
 import { dkimRecordChecker } from '../checkers/dkim-record.js';
@@ -12,9 +13,11 @@ import { faviconPresentChecker } from '../checkers/favicon-present.js';
 import { gitignoreCoverageChecker } from '../checkers/gitignore-coverage.js';
 import { headingHierarchyChecker } from '../checkers/heading-hierarchy.js';
 import { hstsPresentChecker } from '../checkers/hsts-present.js';
+import { httpsEnforcementChecker } from '../checkers/https-enforcement.js';
 import { largeFilesInGitHistoryChecker } from '../checkers/large-files-in-git-history.js';
 import { lockfileCommittedChecker } from '../checkers/lockfile-committed.js';
 import { metaDescriptionPresentChecker } from '../checkers/meta-description-present.js';
+import { notFoundReturns404Checker } from '../checkers/not-found-returns-404.js';
 import { openGraphTagsChecker } from '../checkers/open-graph-tags.js';
 import { permissionsPolicyPresentChecker } from '../checkers/permissions-policy-present.js';
 import { prettierPassingChecker } from '../checkers/prettier-passing.js';
@@ -79,6 +82,9 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   robotsTxtAccessibleChecker,
   sitemapXmlAccessibleChecker,
   faviconPresentChecker,
+  compressionEnabledChecker,
+  httpsEnforcementChecker,
+  notFoundReturns404Checker,
 ]);
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry
