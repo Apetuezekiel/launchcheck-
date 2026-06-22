@@ -1,6 +1,7 @@
 import type {
   CheckContext,
   DnsResolver,
+  HttpClient,
   HttpHeaders,
   HttpResponse,
   LiveContext,
@@ -79,6 +80,7 @@ interface LiveCtxOptions {
   dns?: Partial<DnsResolver>;
   checkerOptions?: Record<string, unknown>;
   thresholds?: Record<string, number>;
+  http?: HttpClient;
 }
 
 const dnsStub = (label: string) => () => Promise.reject(new Error(`dns test-stub: ${label}`));
@@ -91,7 +93,7 @@ export function makeLiveContext(opts: LiveCtxOptions = {}): CheckContext {
   const live: LiveContext = {
     url,
     parsedUrl: new URL(url),
-    http: { fetch: () => Promise.reject(new Error('not used in test')) },
+    http: opts.http ?? { fetch: () => Promise.reject(new Error('not used in test')) },
     rootResponse,
     dom:
       opts.domHtml !== undefined

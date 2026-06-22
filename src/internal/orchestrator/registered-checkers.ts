@@ -8,6 +8,7 @@ import { dkimRecordChecker } from '../checkers/dkim-record.js';
 import { dmarcRecordChecker } from '../checkers/dmarc-record.js';
 import { envExampleExistsChecker } from '../checkers/env-example-exists.js';
 import { eslintPassingChecker } from '../checkers/eslint-passing.js';
+import { faviconPresentChecker } from '../checkers/favicon-present.js';
 import { gitignoreCoverageChecker } from '../checkers/gitignore-coverage.js';
 import { headingHierarchyChecker } from '../checkers/heading-hierarchy.js';
 import { hstsPresentChecker } from '../checkers/hsts-present.js';
@@ -19,9 +20,11 @@ import { permissionsPolicyPresentChecker } from '../checkers/permissions-policy-
 import { prettierPassingChecker } from '../checkers/prettier-passing.js';
 import { readmeRequiredSectionsChecker } from '../checkers/readme-required-sections.js';
 import { referrerPolicyPresentChecker } from '../checkers/referrer-policy-present.js';
+import { robotsTxtAccessibleChecker } from '../checkers/robots-txt-accessible.js';
 import { secretScanChecker } from '../checkers/secret-scan.js';
 import { serverHeadersSuppressedChecker } from '../checkers/server-headers-suppressed.js';
 import { singleH1Checker } from '../checkers/single-h1.js';
+import { sitemapXmlAccessibleChecker } from '../checkers/sitemap-xml-accessible.js';
 import { spfRecordChecker } from '../checkers/spf-record.js';
 import { sslNotExpiringChecker } from '../checkers/ssl-not-expiring.js';
 import { sslValidChecker } from '../checkers/ssl-valid.js';
@@ -73,6 +76,9 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   spfRecordChecker,
   dmarcRecordChecker,
   dkimRecordChecker,
+  robotsTxtAccessibleChecker,
+  sitemapXmlAccessibleChecker,
+  faviconPresentChecker,
 ]);
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry
