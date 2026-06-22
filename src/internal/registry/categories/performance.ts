@@ -10,8 +10,8 @@ export const performanceCheckers: ReadonlyArray<RegistryEntry> = [
     defaultEnabled: true,
     maxSeverity: 'major',
     description:
-      'Sends request with `Accept-Encoding: gzip, br`; checks `Content-Encoding` in response.',
-    consumes: ['rootResponse'],
+      'Sends a dedicated request with `Accept-Encoding: gzip, br, zstd` and checks the response `Content-Encoding` (the shared rootResponse is fetched without Accept-Encoding, so it cannot observe compression).',
+    consumes: ['http'],
   },
   {
     id: 'core-web-vital-cls',
