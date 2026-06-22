@@ -55,3 +55,22 @@ export interface EmailAuthOptions {
    */
   dkimSelectors?: string[];
 }
+
+// -------------------- cors-policy --------------------
+
+export interface CorsPolicyOptions {
+  /**
+   * Path the preflight OPTIONS request is sent to. Default: '/'.
+   */
+  probePath?: string;
+}
+
+// -------------------- health-endpoint --------------------
+
+export interface HealthEndpointOptions {
+  /**
+   * Candidate health-check paths, tried in order. The check passes if any
+   * path returns a 2xx status. Default: ['/health', '/healthz', '/api/health'].
+   */
+  paths?: string[];
+}

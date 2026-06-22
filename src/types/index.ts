@@ -1,7 +1,9 @@
 export type * from './check-context.js';
 export type * from './check-result.js';
 export type {
+  CorsPolicyOptions,
   EmailAuthOptions,
+  HealthEndpointOptions,
   SecretPattern,
   SecretPatternSeverity,
   SecretScanOptions,
