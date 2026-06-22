@@ -37,4 +37,10 @@ describe('sslValidChecker', () => {
     const r = await sslValidChecker.run({ ...makeLiveContext(), live: null });
     expect(r[0]?.status).toBe('skip');
   });
+
+  test('skip when tls is unavailable (e.g. an http URL)', async () => {
+    const r = await sslValidChecker.run(makeLiveContext({}));
+    expect(r[0]?.status).toBe('skip');
+    expect(r[0]?.resultId).toBe('tls-unavailable');
+  });
 });
