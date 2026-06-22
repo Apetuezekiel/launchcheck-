@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-06-19
+
+### Added
+
+- TLS resource (`node:tls`) and DNS resolver (`node:dns/promises`) for live mode.
+- Five security checkers (live): `ssl-valid`, `ssl-not-expiring` (consume `tls`);
+  `spf-record`, `dmarc-record`, `dkim-record` (consume `dns`, gated by the
+  `email-auth` checker option — `enabled`, `domain`, `dkimSelectors`).
+
 ## [0.3.0] - 2026-06-19
 
 ### Added

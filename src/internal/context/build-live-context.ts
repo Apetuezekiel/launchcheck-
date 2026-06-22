@@ -1,8 +1,10 @@
 import type { HttpClient, LiveContext } from '../../types/index.js';
+import { DefaultDnsResolver } from '../runtime/dns-resolver.js';
 import { DefaultHttpClient } from '../runtime/http-client.js';
 import { DomResource } from '../runtime/resources/dom.js';
-import { PlaceholderDnsResolver, UnavailableResource } from '../runtime/resources/placeholders.js';
+import { UnavailableResource } from '../runtime/resources/placeholders.js';
 import { RootResponseResource } from '../runtime/resources/root-response.js';
+import { TlsResource } from '../runtime/resources/tls.js';
 
 /** Test seam: inject a fake HttpClient to avoid network in unit tests. */
 export interface BuildLiveContextDeps {
@@ -36,8 +38,8 @@ export function buildLiveContext(url: string, deps: BuildLiveContextDeps = {}): 
     dom: new DomResource(rootResponse),
     lighthouse: new UnavailableResource(pending('lighthouse'), pending('lighthouse')),
     axe: new UnavailableResource(pending('axe'), pending('axe')),
-    tls: new UnavailableResource(pending('tls'), pending('tls')),
-    dns: new PlaceholderDnsResolver(pending('dns')),
+    tls: new TlsResource(parsedUrl.hostname, Number(parsedUrl.port) || 443),
+    dns: new DefaultDnsResolver(),
   };
   return { live, dispose: () => Promise.resolve() };
 }
