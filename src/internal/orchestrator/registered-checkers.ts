@@ -21,6 +21,7 @@ import { largeFilesInGitHistoryChecker } from '../checkers/large-files-in-git-hi
 import { lockfileCommittedChecker } from '../checkers/lockfile-committed.js';
 import { metaDescriptionPresentChecker } from '../checkers/meta-description-present.js';
 import { notFoundReturns404Checker } from '../checkers/not-found-returns-404.js';
+import { npmAuditChecker } from '../checkers/npm-audit.js';
 import { openGraphTagsChecker } from '../checkers/open-graph-tags.js';
 import { permissionsPolicyPresentChecker } from '../checkers/permissions-policy-present.js';
 import { prettierPassingChecker } from '../checkers/prettier-passing.js';
@@ -40,6 +41,7 @@ import { titleTagPresentChecker } from '../checkers/title-tag-present.js';
 import { todoFixmeScanChecker } from '../checkers/todo-fixme-scan.js';
 import { twitterCardTagsChecker } from '../checkers/twitter-card-tags.js';
 import { typescriptStrictCompileChecker } from '../checkers/typescript-strict-compile.js';
+import { unusedDependenciesChecker } from '../checkers/unused-dependencies.js';
 import { xContentTypeOptionsNosniffChecker } from '../checkers/x-content-type-options-nosniff.js';
 import { findById } from '../registry/index.js';
 /**
@@ -93,6 +95,8 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   healthEndpointRespondsChecker,
   fontPreloadAndDisplaySwapChecker,
   staticAssetCacheHeadersChecker,
+  npmAuditChecker,
+  unusedDependenciesChecker,
 ]);
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry
