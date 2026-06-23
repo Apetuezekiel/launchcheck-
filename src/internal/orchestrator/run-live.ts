@@ -61,7 +61,7 @@ export async function runLiveChecks(options: RunLiveChecksOptions): Promise<Chec
   const logger: Logger = options.logger ?? NOOP_LOGGER;
   const signal: AbortSignal = options.signal ?? new AbortController().signal;
 
-  const { live, dispose } = buildLiveContext(options.url, options.liveDeps ?? {});
+  const { live, dispose } = buildLiveContext(options.url, { signal, ...(options.liveDeps ?? {}) });
 
   let project: ProjectContext | null = null;
   if (options.projectDir !== undefined) {
