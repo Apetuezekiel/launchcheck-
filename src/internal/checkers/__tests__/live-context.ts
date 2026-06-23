@@ -1,4 +1,5 @@
 import type {
+  AxeResult,
   CheckContext,
   DnsResolver,
   HttpClient,
@@ -77,6 +78,7 @@ interface LiveCtxOptions {
   signal?: AbortSignal;
   domHtml?: string;
   tls?: TlsResult;
+  axe?: AxeResult;
   dns?: Partial<DnsResolver>;
   checkerOptions?: Record<string, unknown>;
   thresholds?: Record<string, number>;
@@ -100,7 +102,7 @@ export function makeLiveContext(opts: LiveCtxOptions = {}): CheckContext {
         ? okResource(parseDom(opts.domHtml))
         : unavailableResource('dom test-stub'),
     lighthouse: unavailableResource('lighthouse test-stub'),
-    axe: unavailableResource('axe test-stub'),
+    axe: opts.axe !== undefined ? okResource(opts.axe) : unavailableResource('axe test-stub'),
     tls: opts.tls !== undefined ? okResource(opts.tls) : unavailableResource('tls test-stub'),
     dns: {
       resolveA: opts.dns?.resolveA ?? dnsStub('resolveA'),
