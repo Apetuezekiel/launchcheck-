@@ -80,10 +80,18 @@
     "vitest": "2.1.8"
   },
   "peerDependencies": {
+    "@axe-core/puppeteer": "*",
+    "lighthouse": "*",
     "puppeteer": "*",
     "typescript": ">=5.0.0"
   },
   "peerDependenciesMeta": {
+    "@axe-core/puppeteer": {
+      "optional": true
+    },
+    "lighthouse": {
+      "optional": true
+    },
     "puppeteer": {
       "optional": true
     },
