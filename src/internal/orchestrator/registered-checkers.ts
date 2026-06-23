@@ -10,6 +10,9 @@ import { ciConfigExistsChecker } from '../checkers/ci-config-exists.js';
 import { clickjackingProtectionChecker } from '../checkers/clickjacking-protection.js';
 import { compressionEnabledChecker } from '../checkers/compression-enabled.js';
 import { consoleLogScanChecker } from '../checkers/console-log-scan.js';
+import { coreWebVitalClsChecker } from '../checkers/core-web-vital-cls.js';
+import { coreWebVitalInpChecker } from '../checkers/core-web-vital-inp.js';
+import { coreWebVitalLcpChecker } from '../checkers/core-web-vital-lcp.js';
 import { corsNotWildcardChecker } from '../checkers/cors-not-wildcard.js';
 import { cspPresentChecker } from '../checkers/csp-present.js';
 import { dependenciesOutdatedChecker } from '../checkers/dependencies-outdated.js';
@@ -26,6 +29,10 @@ import { hstsPresentChecker } from '../checkers/hsts-present.js';
 import { httpsEnforcementChecker } from '../checkers/https-enforcement.js';
 import { largeFilesInGitHistoryChecker } from '../checkers/large-files-in-git-history.js';
 import { licenseCompatibilityChecker } from '../checkers/license-compatibility.js';
+import { lighthouseAccessibilityScoreChecker } from '../checkers/lighthouse-accessibility-score.js';
+import { lighthouseBestPracticesScoreChecker } from '../checkers/lighthouse-best-practices-score.js';
+import { lighthousePerformanceScoreChecker } from '../checkers/lighthouse-performance-score.js';
+import { lighthouseSeoScoreChecker } from '../checkers/lighthouse-seo-score.js';
 import { lockfileCommittedChecker } from '../checkers/lockfile-committed.js';
 import { metaDescriptionPresentChecker } from '../checkers/meta-description-present.js';
 import { notFoundReturns404Checker } from '../checkers/not-found-returns-404.js';
@@ -113,6 +120,13 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   a11yImageAltTextChecker,
   a11yKeyboardTabOrderChecker,
   a11yTouchTargetsChecker,
+  lighthousePerformanceScoreChecker,
+  lighthouseAccessibilityScoreChecker,
+  lighthouseBestPracticesScoreChecker,
+  lighthouseSeoScoreChecker,
+  coreWebVitalLcpChecker,
+  coreWebVitalClsChecker,
+  coreWebVitalInpChecker,
 ]);
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry

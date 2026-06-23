@@ -5,6 +5,7 @@ import type {
   HttpClient,
   HttpHeaders,
   HttpResponse,
+  LighthouseResult,
   LiveContext,
   Resource,
   TlsResult,
@@ -79,6 +80,7 @@ interface LiveCtxOptions {
   domHtml?: string;
   tls?: TlsResult;
   axe?: AxeResult;
+  lighthouse?: LighthouseResult;
   dns?: Partial<DnsResolver>;
   checkerOptions?: Record<string, unknown>;
   thresholds?: Record<string, number>;
@@ -101,7 +103,10 @@ export function makeLiveContext(opts: LiveCtxOptions = {}): CheckContext {
       opts.domHtml !== undefined
         ? okResource(parseDom(opts.domHtml))
         : unavailableResource('dom test-stub'),
-    lighthouse: unavailableResource('lighthouse test-stub'),
+    lighthouse:
+      opts.lighthouse !== undefined
+        ? okResource(opts.lighthouse)
+        : unavailableResource('lighthouse test-stub'),
     axe: opts.axe !== undefined ? okResource(opts.axe) : unavailableResource('axe test-stub'),
     tls: opts.tls !== undefined ? okResource(opts.tls) : unavailableResource('tls test-stub'),
     dns: {

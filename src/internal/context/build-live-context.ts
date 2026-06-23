@@ -1,4 +1,5 @@
 import type { HttpClient, LiveContext } from '../../types/index.js';
+import { lighthouseAdapter as defaultLighthouseAdapter } from '../runtime/browser/lighthouse-adapter.js';
 import {
   axePuppeteerAdapter,
   puppeteerChromeAdapter,
@@ -8,6 +9,7 @@ import { DefaultHttpClient } from '../runtime/http-client.js';
 import { type AxeAdapter, AxeResource } from '../runtime/resources/axe.js';
 import { type ChromeAdapter, ChromeResource } from '../runtime/resources/chrome.js';
 import { DomResource } from '../runtime/resources/dom.js';
+import { type LighthouseAdapter, LighthouseResource } from '../runtime/resources/lighthouse.js';
 import { UnavailableResource } from '../runtime/resources/placeholders.js';
 import { RootResponseResource } from '../runtime/resources/root-response.js';
 import { TlsResource } from '../runtime/resources/tls.js';
@@ -18,6 +20,7 @@ export interface BuildLiveContextDeps {
   signal?: AbortSignal;
   chromeAdapter?: ChromeAdapter;
   axeAdapter?: AxeAdapter;
+  lighthouseAdapter?: LighthouseAdapter;
 }
 
 /** A built live context plus a disposer that closes the browser if it was launched. */
@@ -28,9 +31,10 @@ export interface BuiltLiveContext {
 
 /**
  * Assembles a LiveContext for `url`. Wires the HTTP client, rootResponse,
- * dom/tls resources, and the chrome/axe browser resources (available when the
- * optional puppeteer / @axe-core/puppeteer peer deps are installed).
- * Lighthouse remains an unavailable placeholder until its phase lands.
+ * dom/tls resources, chrome/axe browser resources (available when the
+ * optional puppeteer / @axe-core/puppeteer peer deps are installed), and
+ * the lighthouse resource (available when the optional lighthouse peer dep
+ * is installed).
  */
 export function buildLiveContext(url: string, deps: BuildLiveContextDeps = {}): BuiltLiveContext {
   const parsedUrl = new URL(url);
@@ -39,16 +43,18 @@ export function buildLiveContext(url: string, deps: BuildLiveContextDeps = {}): 
   const rootResponse = new RootResponseResource(url, http);
   const chrome = new ChromeResource(deps.chromeAdapter ?? puppeteerChromeAdapter, signal);
   const axe = new AxeResource(chrome, url, deps.axeAdapter ?? axePuppeteerAdapter, signal);
+  const lighthouse = new LighthouseResource(
+    url,
+    deps.lighthouseAdapter ?? defaultLighthouseAdapter,
+    signal,
+  );
   const live: LiveContext = {
     url,
     parsedUrl,
     http,
     rootResponse,
     dom: new DomResource(rootResponse),
-    lighthouse: new UnavailableResource(
-      'lighthouse',
-      'lighthouse resource not implemented yet (live runtime phase pending)',
-    ),
+    lighthouse,
     axe,
     tls:
       parsedUrl.protocol === 'https:'

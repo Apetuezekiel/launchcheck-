@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import type { AxeResult } from '../../../types/index.js';
+import type { AxeResult, LighthouseResult } from '../../../types/index.js';
 import { ALL_CHECKERS } from '../../orchestrator/registered-checkers.js';
 import { findById } from '../../registry/index.js';
 import { makeLiveContext } from './live-context.js';
@@ -26,6 +26,41 @@ describe('axe-backed checkers respect registry maxSeverity', () => {
       const max = findById(checker.id)?.maxSeverity;
       expect(max).toBeDefined();
       const results = await checker.run(makeLiveContext({ axe: EMPTY_AXE }));
+      expect(results.length).toBeGreaterThan(0);
+      for (const r of results) {
+        expect(r.severity).toBe(max);
+      }
+    });
+  }
+});
+
+// The lighthouse fixture scores and metrics all pass thresholds.
+const LIGHTHOUSE_RESULT: LighthouseResult = {
+  categories: {
+    performance: { score: 1 },
+    accessibility: { score: 1 },
+    'best-practices': { score: 1 },
+    seo: { score: 1 },
+  },
+  audits: {
+    'largest-contentful-paint': { numericValue: 100 },
+    'cumulative-layout-shift': { numericValue: 0 },
+    'interaction-to-next-paint': { numericValue: 50 },
+  },
+};
+
+const lighthouseCheckers = ALL_CHECKERS.filter((c) => c.consumes?.includes('lighthouse'));
+
+describe('lighthouse-backed checkers respect registry maxSeverity', () => {
+  test('there is at least one lighthouse-backed checker to guard', () => {
+    expect(lighthouseCheckers.length).toBeGreaterThan(0);
+  });
+
+  for (const checker of lighthouseCheckers) {
+    test(`${checker.id} emits severity === registry maxSeverity`, async () => {
+      const max = findById(checker.id)?.maxSeverity;
+      expect(max).toBeDefined();
+      const results = await checker.run(makeLiveContext({ lighthouse: LIGHTHOUSE_RESULT }));
       expect(results.length).toBeGreaterThan(0);
       for (const r of results) {
         expect(r.severity).toBe(max);

@@ -7,6 +7,7 @@ import type {
   DnsResolver,
   EmailAuthOptions,
   HttpResponse,
+  LighthouseResult,
   ParsedDom,
   Severity,
   TlsResult,
@@ -347,4 +348,74 @@ export function summarizeAxeViolations(violations: AxeViolation[]): string {
       return `${v.id} (${nodeCount} node${nodeCount === 1 ? '' : 's'}): ${v.help}`;
     })
     .join('\n');
+}
+
+/** Resolves the shared lighthouse resource, collapsing the common preamble. */
+export type LighthouseOutcome =
+  | { kind: 'done'; results: CheckResult[] }
+  | { kind: 'ok'; lighthouse: LighthouseResult };
+
+export async function withLighthouse(
+  ctx: CheckContext,
+  checkerId: string,
+  category: CheckCategory,
+  severity: Severity,
+): Promise<LighthouseOutcome> {
+  if (ctx.live === null) {
+    return {
+      kind: 'done',
+      results: [
+        liveResult(
+          checkerId,
+          category,
+          severity,
+          'skip',
+          'no-live-context',
+          'Skipped: no live context (run with --url).',
+        ),
+      ],
+    };
+  }
+  const outcome = await resolveResource(ctx.live.lighthouse, ctx.signal);
+  if (outcome.kind === 'skip') {
+    return {
+      kind: 'done',
+      results: [
+        liveResult(
+          checkerId,
+          category,
+          severity,
+          'skip',
+          'lighthouse-unavailable',
+          `Skipped: ${outcome.reason}`,
+        ),
+      ],
+    };
+  }
+  if (outcome.kind === 'fail') {
+    return {
+      kind: 'done',
+      results: [
+        liveResult(
+          checkerId,
+          category,
+          severity,
+          'fail',
+          'lighthouse-failed',
+          `Lighthouse run failed for ${ctx.live.url}: ${outcome.error.message}`,
+          { fix: 'Ensure the URL is reachable and lighthouse can analyse it.' },
+        ),
+      ],
+    };
+  }
+  return { kind: 'ok', lighthouse: outcome.value };
+}
+
+/**
+ * Reads a numeric threshold from config, falling back to `fallback` if absent
+ * or not a positive finite number.
+ */
+export function readThreshold(ctx: CheckContext, key: string, fallback: number): number {
+  const value = ctx.config.thresholds[key];
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
 }
