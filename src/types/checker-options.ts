@@ -74,3 +74,20 @@ export interface HealthEndpointOptions {
    */
   paths?: string[];
 }
+
+// -------------------- license-compatibility --------------------
+
+export interface LicenseCompatibilityOptions {
+  /**
+   * SPDX license prefixes to deny (case-insensitive, matched against each
+   * token of an installed package's license). Default: ['AGPL', 'LGPL', 'GPL'].
+   */
+  denyList?: string[];
+
+  /**
+   * Whether to treat the project as proprietary (the case in which copyleft
+   * dependencies are a problem). Default: true. Set to false for a project
+   * that is itself copyleft/open-source — the checker then skips.
+   */
+  treatProprietaryAsDefault?: boolean;
+}

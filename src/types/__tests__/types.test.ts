@@ -19,6 +19,7 @@ import type {
   HttpRequestInit,
   HttpResponse,
   IgnoreMatcher,
+  LicenseCompatibilityOptions,
   LighthouseResult,
   LiveCheckContext,
   LiveContext,
@@ -61,6 +62,7 @@ type _PublicSurface = {
   domElement: DomElement;
   emailAuthOptions: EmailAuthOptions;
   healthEndpointOptions: HealthEndpointOptions;
+  licenseCompatibilityOptions: LicenseCompatibilityOptions;
   httpClient: HttpClient;
   httpHeaders: HttpHeaders;
   httpRequestInit: HttpRequestInit;

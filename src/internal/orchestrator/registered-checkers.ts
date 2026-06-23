@@ -6,6 +6,7 @@ import { compressionEnabledChecker } from '../checkers/compression-enabled.js';
 import { consoleLogScanChecker } from '../checkers/console-log-scan.js';
 import { corsNotWildcardChecker } from '../checkers/cors-not-wildcard.js';
 import { cspPresentChecker } from '../checkers/csp-present.js';
+import { dependenciesOutdatedChecker } from '../checkers/dependencies-outdated.js';
 import { dkimRecordChecker } from '../checkers/dkim-record.js';
 import { dmarcRecordChecker } from '../checkers/dmarc-record.js';
 import { envExampleExistsChecker } from '../checkers/env-example-exists.js';
@@ -18,6 +19,7 @@ import { healthEndpointRespondsChecker } from '../checkers/health-endpoint-respo
 import { hstsPresentChecker } from '../checkers/hsts-present.js';
 import { httpsEnforcementChecker } from '../checkers/https-enforcement.js';
 import { largeFilesInGitHistoryChecker } from '../checkers/large-files-in-git-history.js';
+import { licenseCompatibilityChecker } from '../checkers/license-compatibility.js';
 import { lockfileCommittedChecker } from '../checkers/lockfile-committed.js';
 import { metaDescriptionPresentChecker } from '../checkers/meta-description-present.js';
 import { notFoundReturns404Checker } from '../checkers/not-found-returns-404.js';
@@ -97,6 +99,8 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   staticAssetCacheHeadersChecker,
   npmAuditChecker,
   unusedDependenciesChecker,
+  dependenciesOutdatedChecker,
+  licenseCompatibilityChecker,
 ]);
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry
