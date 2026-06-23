@@ -4,6 +4,62 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-06-23
+
+All 59 registry checkers are implemented across **static**, **live**
+(HTTP / DOM / TLS / DNS), and **browser** (Lighthouse / axe) modes
+(35 -> 59 since 0.5.0). The browser-based checks are gated behind optional peer
+dependencies, skip when those peers are absent, and are pending real-site
+validation -- hence the 0.6 line rather than 1.0.
+
+### Added
+
+- **Performance (live)** -- `compression-enabled`, `font-preload-and-display-swap`,
+  `static-asset-cache-headers` (HTTP/DOM); and the Lighthouse-backed
+  `lighthouse-performance-score`, `lighthouse-accessibility-score`,
+  `lighthouse-best-practices-score`, `lighthouse-seo-score`, `core-web-vital-lcp`,
+  `core-web-vital-cls`, `core-web-vital-inp`.
+- **Accessibility (live, axe)** -- `a11y-aria-valid`, `a11y-color-contrast`,
+  `a11y-focus-states`, `a11y-image-alt-text`, `a11y-keyboard-tab-order`,
+  `a11y-touch-targets`.
+- **Security (live)** -- `https-enforcement` (HTTP-to-HTTPS redirect),
+  `cors-not-wildcard` (preflight `Access-Control-Allow-Origin`).
+- **Deployment (live)** -- `health-endpoint-responds`, `not-found-returns-404`.
+- **Dependencies (static)** -- `npm-audit`, `dependencies-outdated`
+  (deprecated-package detection via registry lookup), `unused-dependencies`,
+  `license-compatibility`.
+- **Browser resources** -- a shared `ChromeResource` (puppeteer) backing
+  `AxeResource` (`@axe-core/puppeteer`) for accessibility, and an independent
+  `LighthouseResource` (lighthouse's bundled `chrome-launcher`) for performance.
+  All sit behind injectable adapters; each reports unavailable -- and its
+  checkers `skip` -- when its optional peer is not installed.
+- **Checker options** -- `cors-policy` (`probePath`), `health-endpoint`
+  (`paths`), and `license-compatibility` (`denyList`, `treatProprietaryAsDefault`).
+- **Thresholds** -- configurable Lighthouse / Core-Web-Vital limits
+  (`lcp`, `cls`, `inp`, `lighthouse-performance`, `lighthouse-accessibility`,
+  `lighthouse-best-practices`, `lighthouse-seo`).
+- A severity-ceiling guard test asserting every axe- and lighthouse-backed
+  checker emits a `severity` equal to its registry `maxSeverity`.
+
+### Fixed
+
+- `compression-enabled` issues its own request advertising
+  `Accept-Encoding: gzip, br, zstd` rather than reading the shared rootResponse
+  (which is fetched without content negotiation), avoiding false failures.
+- `a11y-image-alt-text` and `a11y-touch-targets` severities clamped to their
+  registry `maxSeverity` (`major` and `minor` respectively).
+- `core-web-vital-inp` reports `skip` / `inp-unavailable` when Lighthouse does
+  not measure INP, instead of falsely passing with a 0ms value.
+- Subprocess checkers (`typescript-strict-compile`, `npm-audit`, `eslint-passing`,
+  `prettier-passing`, `dependencies-outdated`) spawn `.cmd` binaries via a shell
+  on Windows, fixing a `spawn EINVAL` that broke them on every Windows run.
+
+### Dependencies
+
+- Added optional peer dependencies `@axe-core/puppeteer` and `lighthouse`
+  (alongside `puppeteer`). The browser-based checks also require a
+  Chrome/Chromium binary discoverable by chrome-launcher.
+
 ## [0.5.0] - 2026-06-19
 
 ### Added
