@@ -16,8 +16,21 @@ export const coreWebVitalInpChecker: Checker = {
     if (got.kind === 'done') {
       return got.results;
     }
+    const audit = got.lighthouse.audits['interaction-to-next-paint'];
+    if (audit?.numericValue === undefined) {
+      return [
+        liveResult(
+          ID,
+          CAT,
+          SEV,
+          'skip',
+          'inp-unavailable',
+          'INP not reported by Lighthouse for this run (no interaction data available).',
+        ),
+      ];
+    }
     const max = readThreshold(ctx, THRESHOLD_KEY, DEFAULT_MS);
-    const value = Math.round(got.lighthouse.audits['interaction-to-next-paint']?.numericValue ?? 0);
+    const value = Math.round(audit.numericValue);
     if (value <= max) {
       return [liveResult(ID, CAT, SEV, 'pass', 'inp-ok', `INP is ${value}ms (<= ${max}ms).`)];
     }

@@ -64,4 +64,22 @@ describe('coreWebVitalInpChecker', () => {
     expect(r[0]?.status).toBe('fail');
     expect(r[0]?.resultId).toBe('inp-slow');
   });
+
+  test('skip inp-unavailable when the INP audit is absent', async () => {
+    const noInp: LighthouseResult = {
+      categories: {
+        performance: { score: 1 },
+        accessibility: { score: 1 },
+        'best-practices': { score: 1 },
+        seo: { score: 1 },
+      },
+      audits: {
+        'largest-contentful-paint': { numericValue: 100 },
+        'cumulative-layout-shift': { numericValue: 0 },
+      },
+    };
+    const r = await coreWebVitalInpChecker.run(makeLiveContext({ lighthouse: noInp }));
+    expect(r[0]?.status).toBe('skip');
+    expect(r[0]?.resultId).toBe('inp-unavailable');
+  });
 });
