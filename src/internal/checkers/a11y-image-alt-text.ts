@@ -10,7 +10,7 @@ export const a11yImageAltTextChecker: Checker = {
   mode: 'live',
   consumes: ['axe'],
   async run(ctx: CheckContext): Promise<CheckResult[]> {
-    const outcome = await withAxe(ctx, 'a11y-image-alt-text', 'accessibility', 'critical');
+    const outcome = await withAxe(ctx, 'a11y-image-alt-text', 'accessibility', 'major');
     if (outcome.kind === 'done') return outcome.results;
     const { axe } = outcome;
     const violations = axe.violations.filter((v) => IMAGE_RULES.has(v.id));
@@ -19,7 +19,7 @@ export const a11yImageAltTextChecker: Checker = {
         liveResult(
           'a11y-image-alt-text',
           'accessibility',
-          'critical',
+          'major',
           'pass',
           'image-alt-ok',
           'All images have alt text.',
@@ -30,7 +30,7 @@ export const a11yImageAltTextChecker: Checker = {
       liveResult(
         'a11y-image-alt-text',
         'accessibility',
-        'critical',
+        'major',
         'fail',
         'image-alt-violations',
         `${violations.length} image alt text violation${violations.length === 1 ? '' : 's'} found.`,
