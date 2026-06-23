@@ -41,7 +41,7 @@ async function defaultRunNpmOutdated(
       timeout: 60_000,
       maxBuffer: 50 * 1024 * 1024,
       signal,
-      shell: false,
+      shell: process.platform === 'win32',
       windowsHide: true,
     });
     return { stdout: result.stdout, exitCode: 0 };
