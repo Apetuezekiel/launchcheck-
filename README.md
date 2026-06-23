@@ -6,9 +6,10 @@ code quality, security, SEO, dependencies, deployment config, and documentation
 in two modes: **static** (against a project directory) and **live** (against a
 running URL).
 
-> Status: 0.5.0. 35 checks across both modes. The Lighthouse/axe-based
-> performance and accessibility checks (puppeteer) are on the roadmap. See
-> [CHANGELOG.md](./CHANGELOG.md).
+> Status: 59 checks across both modes (static + live), including Lighthouse
+> performance / Core Web Vitals and axe accessibility checks. The browser-based
+> checks require optional peer dependencies (see Install) and are skipped when
+> those peers are absent. See [CHANGELOG.md](./CHANGELOG.md).
 
 ## Install
 
@@ -20,8 +21,18 @@ Or add it to a project as a dev dependency:
 
     npm install --save-dev launchcheck
 
-Requires Node.js >= 18. `typescript` and `puppeteer` are optional peer
-dependencies, pulled in only by the checkers that use them.
+Requires Node.js >= 18. `typescript`, `puppeteer`, `@axe-core/puppeteer`, and
+`lighthouse` are optional peer dependencies, pulled in only by the checkers that
+use them:
+
+- Accessibility (axe) checks: install `puppeteer` and `@axe-core/puppeteer`.
+- Performance / Core Web Vitals (Lighthouse) checks: install `lighthouse`, plus
+  a Chrome/Chromium binary discoverable by chrome-launcher (a system Chrome
+  install, or a path it can find).
+
+Checkers whose optional peer is not installed are reported as `skip`, never
+`fail`, so a default install runs the full static + HTTP/DOM/TLS/DNS suite
+without any browser.
 
 ## Usage
 
@@ -49,6 +60,12 @@ TLS certificate validity and expiry, SEO (title, meta description, canonical,
 single H1, heading order, Open Graph, Twitter Card, JSON-LD, robots.txt,
 sitemap.xml, favicon), and â€” when enabled â€” email authentication DNS records
 (SPF, DKIM, DMARC).
+
+With the optional browser peers installed, live mode additionally runs
+accessibility checks via axe-core (ARIA validity, color contrast, focus states,
+image alt text, keyboard tab order, touch targets) and performance checks via
+Lighthouse (performance, accessibility, best-practices, and SEO category scores,
+plus the Core Web Vitals LCP, CLS, and INP).
 
 Combine static and live in one run (pass both a URL and a project directory):
 
