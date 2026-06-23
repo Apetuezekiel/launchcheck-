@@ -11,6 +11,7 @@ import { dmarcRecordChecker } from '../checkers/dmarc-record.js';
 import { envExampleExistsChecker } from '../checkers/env-example-exists.js';
 import { eslintPassingChecker } from '../checkers/eslint-passing.js';
 import { faviconPresentChecker } from '../checkers/favicon-present.js';
+import { fontPreloadAndDisplaySwapChecker } from '../checkers/font-preload-and-display-swap.js';
 import { gitignoreCoverageChecker } from '../checkers/gitignore-coverage.js';
 import { headingHierarchyChecker } from '../checkers/heading-hierarchy.js';
 import { healthEndpointRespondsChecker } from '../checkers/health-endpoint-responds.js';
@@ -33,6 +34,7 @@ import { sitemapXmlAccessibleChecker } from '../checkers/sitemap-xml-accessible.
 import { spfRecordChecker } from '../checkers/spf-record.js';
 import { sslNotExpiringChecker } from '../checkers/ssl-not-expiring.js';
 import { sslValidChecker } from '../checkers/ssl-valid.js';
+import { staticAssetCacheHeadersChecker } from '../checkers/static-asset-cache-headers.js';
 import { structuredDataChecker } from '../checkers/structured-data.js';
 import { titleTagPresentChecker } from '../checkers/title-tag-present.js';
 import { todoFixmeScanChecker } from '../checkers/todo-fixme-scan.js';
@@ -89,6 +91,8 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   notFoundReturns404Checker,
   corsNotWildcardChecker,
   healthEndpointRespondsChecker,
+  fontPreloadAndDisplaySwapChecker,
+  staticAssetCacheHeadersChecker,
 ]);
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry
