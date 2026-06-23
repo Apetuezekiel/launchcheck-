@@ -1,6 +1,6 @@
 {
   "name": "launchcheck",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Automated pre-launch QA for web projects: a CLI of static checks for code quality, dependencies, deployment, and documentation.",
   "license": "MIT",
   "author": "Apetu Ezekiel",
