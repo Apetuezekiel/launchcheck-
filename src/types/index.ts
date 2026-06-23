@@ -4,6 +4,7 @@ export type {
   CorsPolicyOptions,
   EmailAuthOptions,
   HealthEndpointOptions,
+  LicenseCompatibilityOptions,
   SecretPattern,
   SecretPatternSeverity,
   SecretScanOptions,
