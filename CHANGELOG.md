@@ -4,12 +4,13 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2026-06-23
+## [0.6.0] - 2026-06-23
 
-Feature-complete: all 59 registry checkers are implemented across **static**,
-**live** (HTTP / DOM / TLS / DNS), and **browser** (Lighthouse / axe) modes
-(35 -> 59 since 0.5.0). The browser-based checks require optional peer
-dependencies and are skipped when those peers are absent.
+All 59 registry checkers are implemented across **static**, **live**
+(HTTP / DOM / TLS / DNS), and **browser** (Lighthouse / axe) modes
+(35 -> 59 since 0.5.0). The browser-based checks are gated behind optional peer
+dependencies, skip when those peers are absent, and are pending real-site
+validation -- hence the 0.6 line rather than 1.0.
 
 ### Added
 
@@ -49,6 +50,9 @@ dependencies and are skipped when those peers are absent.
   registry `maxSeverity` (`major` and `minor` respectively).
 - `core-web-vital-inp` reports `skip` / `inp-unavailable` when Lighthouse does
   not measure INP, instead of falsely passing with a 0ms value.
+- Subprocess checkers (`typescript-strict-compile`, `npm-audit`, `eslint-passing`,
+  `prettier-passing`, `dependencies-outdated`) spawn `.cmd` binaries via a shell
+  on Windows, fixing a `spawn EINVAL` that broke them on every Windows run.
 
 ### Dependencies
 
