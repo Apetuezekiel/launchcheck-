@@ -8,7 +8,7 @@ export const a11yTouchTargetsChecker: Checker = {
   mode: 'live',
   consumes: ['axe'],
   async run(ctx: CheckContext): Promise<CheckResult[]> {
-    const outcome = await withAxe(ctx, 'a11y-touch-targets', 'accessibility', 'major');
+    const outcome = await withAxe(ctx, 'a11y-touch-targets', 'accessibility', 'minor');
     if (outcome.kind === 'done') return outcome.results;
     const { axe } = outcome;
     const violations = axe.violations.filter((v) => v.id === 'target-size');
@@ -17,7 +17,7 @@ export const a11yTouchTargetsChecker: Checker = {
         liveResult(
           'a11y-touch-targets',
           'accessibility',
-          'major',
+          'minor',
           'pass',
           'touch-targets-ok',
           'All touch targets meet minimum size requirements.',
@@ -28,7 +28,7 @@ export const a11yTouchTargetsChecker: Checker = {
       liveResult(
         'a11y-touch-targets',
         'accessibility',
-        'major',
+        'minor',
         'fail',
         'touch-target-violations',
         `${violations.length} touch target violation${violations.length === 1 ? '' : 's'} found.`,
