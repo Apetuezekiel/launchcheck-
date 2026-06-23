@@ -9,9 +9,11 @@ import type {
   Checker,
   CheckerMode,
   CombinedCheckContext,
+  CorsPolicyOptions,
   DnsResolver,
   DomElement,
   EmailAuthOptions,
+  HealthEndpointOptions,
   HttpClient,
   HttpHeaders,
   HttpRequestInit,
@@ -54,9 +56,11 @@ type _PublicSurface = {
   checkerMode: CheckerMode;
   checkResult: CheckResult;
   combinedCheckContext: CombinedCheckContext;
+  corsPolicyOptions: CorsPolicyOptions;
   dnsResolver: DnsResolver;
   domElement: DomElement;
   emailAuthOptions: EmailAuthOptions;
+  healthEndpointOptions: HealthEndpointOptions;
   httpClient: HttpClient;
   httpHeaders: HttpHeaders;
   httpRequestInit: HttpRequestInit;
