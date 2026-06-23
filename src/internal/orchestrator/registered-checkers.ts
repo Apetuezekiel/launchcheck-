@@ -1,4 +1,10 @@
 import type { Checker } from '../../types/index.js';
+import { a11yAriaValidChecker } from '../checkers/a11y-aria-valid.js';
+import { a11yColorContrastChecker } from '../checkers/a11y-color-contrast.js';
+import { a11yFocusStatesChecker } from '../checkers/a11y-focus-states.js';
+import { a11yImageAltTextChecker } from '../checkers/a11y-image-alt-text.js';
+import { a11yKeyboardTabOrderChecker } from '../checkers/a11y-keyboard-tab-order.js';
+import { a11yTouchTargetsChecker } from '../checkers/a11y-touch-targets.js';
 import { canonicalUrlChecker } from '../checkers/canonical-url.js';
 import { ciConfigExistsChecker } from '../checkers/ci-config-exists.js';
 import { clickjackingProtectionChecker } from '../checkers/clickjacking-protection.js';
@@ -101,6 +107,12 @@ export const ALL_CHECKERS: ReadonlyArray<Checker> = Object.freeze([
   unusedDependenciesChecker,
   dependenciesOutdatedChecker,
   licenseCompatibilityChecker,
+  a11yAriaValidChecker,
+  a11yColorContrastChecker,
+  a11yFocusStatesChecker,
+  a11yImageAltTextChecker,
+  a11yKeyboardTabOrderChecker,
+  a11yTouchTargetsChecker,
 ]);
 /**
  * Asserts that every Checker in `checkers` has a matching RegistryEntry
