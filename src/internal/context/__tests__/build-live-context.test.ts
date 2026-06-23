@@ -44,4 +44,46 @@ describe('buildLiveContext', () => {
     });
     expect(live.axe.isAvailable()).toBe(false);
   });
+  test('lighthouse resource is available when lighthouse adapter reports installed', () => {
+    const { live } = buildLiveContext('https://example.test/', {
+      lighthouseAdapter: {
+        isInstalled: () => true,
+        run: async () => ({
+          categories: {
+            performance: { score: 1 },
+            accessibility: { score: 1 },
+            'best-practices': { score: 1 },
+            seo: { score: 1 },
+          },
+          audits: {
+            'largest-contentful-paint': { numericValue: 100 },
+            'cumulative-layout-shift': { numericValue: 0 },
+            'interaction-to-next-paint': { numericValue: 50 },
+          },
+        }),
+      },
+    });
+    expect(live.lighthouse.isAvailable()).toBe(true);
+  });
+  test('lighthouse resource is unavailable when lighthouse adapter reports not installed', () => {
+    const { live } = buildLiveContext('https://example.test/', {
+      lighthouseAdapter: {
+        isInstalled: () => false,
+        run: async () => ({
+          categories: {
+            performance: { score: 1 },
+            accessibility: { score: 1 },
+            'best-practices': { score: 1 },
+            seo: { score: 1 },
+          },
+          audits: {
+            'largest-contentful-paint': { numericValue: 100 },
+            'cumulative-layout-shift': { numericValue: 0 },
+            'interaction-to-next-paint': { numericValue: 50 },
+          },
+        }),
+      },
+    });
+    expect(live.lighthouse.isAvailable()).toBe(false);
+  });
 });
