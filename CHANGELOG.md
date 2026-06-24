@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-06-23
+
+First stable release. All 59 registry checkers are implemented and validated; the
+browser-based checks (axe accessibility, Lighthouse performance / Core Web Vitals)
+have been dogfooded against real sites and are promoted from the 0.6 "pending
+validation" status. No checker behaviour changed since 0.6.0 beyond the axe
+stability fix below.
+
+### Fixed
+
+- axe analysis now waits for the page to settle (`document.readyState` complete)
+  and retries `analyze()` once on a "Page/Frame is not ready" error, fixing flaky
+  `a11y-*` failures when axe and Lighthouse run in the same scan (their two
+  headless-Chrome instances could race the page's late navigation/redirect).
+
 ## [0.6.0] - 2026-06-23
 
 All 59 registry checkers are implemented across **static**, **live**
