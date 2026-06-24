@@ -19,6 +19,32 @@ const SECURE_HEADERS: Record<string, string> = {
 };
 const LONG_CACHE = { 'cache-control': 'public, max-age=31536000, immutable' };
 
+// Force the browser resources unavailable via the live-deps seam so the skip
+// cascade is deterministic regardless of whether the optional peers happen to be
+// installed in the dev/CI environment. The HTTP/DOM pipeline is what this suite
+// exercises; the browser path is covered by unit tests and the CI browser smoke.
+const NO_BROWSER = {
+  chromeAdapter: {
+    isInstalled: () => false,
+    launch: async () => {
+      throw new Error('unused');
+    },
+    close: async () => {},
+  },
+  axeAdapter: {
+    isInstalled: () => false,
+    run: async () => {
+      throw new Error('unused');
+    },
+  },
+  lighthouseAdapter: {
+    isInstalled: () => false,
+    run: async () => {
+      throw new Error('unused');
+    },
+  },
+};
+
 describe('live pipeline against a well-configured fixture', () => {
   let fx: Fixture;
   let results: CheckResult[];
@@ -41,7 +67,7 @@ describe('live pipeline against a well-configured fixture', () => {
         '/health': { body: 'ok' },
       },
     });
-    results = await runLiveChecks({ url: fx.url });
+    results = await runLiveChecks({ url: fx.url, liveDeps: NO_BROWSER });
   }, 60_000);
   afterAll(async () => {
     await fx.close();
@@ -89,21 +115,16 @@ describe('live pipeline against a well-configured fixture', () => {
     expect(cache.every((r) => r.status === 'pass')).toBe(true);
   });
 
-  test('browser + TLS checks complete cleanly (http URL)', () => {
+  test('browser + TLS checks skip cleanly (no peers / http URL)', () => {
     // ssl-valid always skips on http:// — no TLS resource is created.
     expect(status(results, 'ssl-valid')).toBe('skip');
-    // Browser checks: skip when peers are absent (CI default), fail when peers are
-    // installed but Chromium cannot launch, or pass/fail on real results when the
-    // browser works fully. All three are valid; the key property is that the pipeline
-    // always produces a result and never throws.
+    // Browser checks skip because NO_BROWSER forces the peers unavailable.
     for (const id of [
       'a11y-color-contrast',
       'lighthouse-performance-score',
       'core-web-vital-lcp',
     ]) {
-      const s = status(results, id);
-      expect(s, `${id} should produce a defined status`).toBeDefined();
-      expect(['skip', 'fail', 'pass'], id).toContain(s);
+      expect(status(results, id), id).toBe('skip');
     }
   });
 });
@@ -117,7 +138,7 @@ describe('live pipeline against a misconfigured fixture', () => {
       routes: { '/': { body: BAD_HTML } },
       fallback: { status: 404, body: 'nope' },
     });
-    results = await runLiveChecks({ url: fx.url });
+    results = await runLiveChecks({ url: fx.url, liveDeps: NO_BROWSER });
   }, 60_000);
   afterAll(async () => {
     await fx.close();
