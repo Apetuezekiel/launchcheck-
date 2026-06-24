@@ -1,5 +1,5 @@
 import type { Checker } from '../../types/index.js';
-import { liveResult } from '../runtime/live-checker-support.js';
+import { liveResult, readThreshold } from '../runtime/live-checker-support.js';
 
 const ID = 'robots-txt-accessible';
 const CAT = 'seo' as const;
@@ -24,11 +24,12 @@ export const robotsTxtAccessibleChecker: Checker = {
         ),
       ];
     }
+    const timeoutMs = readThreshold(ctx, 'ancillary-timeout-ms', 8000);
     const target = new URL('/robots.txt', ctx.live.url).toString();
     let body: string;
     let status: number;
     try {
-      const res = await ctx.live.http.fetch(target);
+      const res = await ctx.live.http.fetch(target, { timeoutMs });
       body = res.body;
       status = res.status;
     } catch (err) {

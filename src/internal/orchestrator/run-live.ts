@@ -11,9 +11,8 @@ import type {
 } from '../../types/index.js';
 import { type BuildLiveContextDeps, buildLiveContext } from '../context/build-live-context.js';
 import { buildProjectContext } from '../context/build-project-context.js';
+import { LAUNCHCHECK_VERSION } from '../version.js';
 import { ALL_CHECKERS, validateCheckerRegistration } from './registered-checkers.js';
-
-const LAUNCHCHECK_VERSION = '0.0.0';
 
 const NOOP_LOGGER: Logger = {
   debug: () => undefined,

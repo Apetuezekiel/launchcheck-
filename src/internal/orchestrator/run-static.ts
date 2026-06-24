@@ -8,10 +8,8 @@ import type {
   ResolvedConfig,
 } from '../../types/index.js';
 import { buildProjectContext } from '../context/build-project-context.js';
+import { LAUNCHCHECK_VERSION } from '../version.js';
 import { ALL_CHECKERS, validateCheckerRegistration } from './registered-checkers.js';
-
-/** Current launchcheck version — stamped on every CheckContext.meta. */
-const LAUNCHCHECK_VERSION = '0.0.0';
 
 /** Default no-op logger when the caller does not supply one. */
 const NOOP_LOGGER: Logger = {
