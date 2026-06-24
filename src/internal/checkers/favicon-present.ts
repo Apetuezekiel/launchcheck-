@@ -1,5 +1,5 @@
 import type { Checker } from '../../types/index.js';
-import { liveResult } from '../runtime/live-checker-support.js';
+import { liveResult, readThreshold } from '../runtime/live-checker-support.js';
 import { resolveResource } from '../runtime/resolve-resource.js';
 
 const ID = 'favicon-present';
@@ -44,9 +44,10 @@ export const faviconPresentChecker: Checker = {
       }
       // DOM loaded but no icon link â€” the host is up, so the /favicon.ico probe
       // is meaningful and fast. (Only attempted here, never when the DOM failed.)
+      const timeoutMs = readThreshold(ctx, 'ancillary-timeout-ms', 8000);
       const target = new URL('/favicon.ico', ctx.live.url).toString();
       try {
-        const res = await ctx.live.http.fetch(target);
+        const res = await ctx.live.http.fetch(target, { timeoutMs });
         if (res.status === 200) {
           return [liveResult(ID, CAT, SEV, 'pass', 'favicon-file', '/favicon.ico returns 200.')];
         }
