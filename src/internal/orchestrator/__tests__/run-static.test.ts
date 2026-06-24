@@ -201,7 +201,7 @@ describe('runStaticChecks', () => {
     expect(ctx.project?.projectDir).toBe(path.resolve(root));
   });
 
-  test('ctx.meta has a UUID runId, Date startedAt, launchcheckVersion "0.0.0", nodeVersion === process.version', async () => {
+  test('ctx.meta has a UUID runId, Date startedAt, launchcheckVersion "dev" (unbuilt), nodeVersion === process.version', async () => {
     let captured: CheckContext | null = null;
     const checker = stub({
       id: 'console-log-scan',
@@ -218,7 +218,7 @@ describe('runStaticChecks', () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
     );
     expect(ctx.meta.startedAt).toBeInstanceOf(Date);
-    expect(ctx.meta.launchcheckVersion).toBe('0.0.0');
+    expect(ctx.meta.launchcheckVersion).toBe('dev');
     expect(ctx.meta.nodeVersion).toBe(process.version);
   });
 
