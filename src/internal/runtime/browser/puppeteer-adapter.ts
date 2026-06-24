@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { setTimeout as sleep } from 'node:timers/promises';
 import type { AxeResult, AxeViolation } from '../../../types/index.js';
 import type { AxeAdapter } from '../resources/axe.js';
 import type { ChromeAdapter, ChromeBrowser } from '../resources/chrome.js';
@@ -32,6 +33,7 @@ interface PuppeteerLike {
 
 interface PageLike {
   goto(url: string, opts: unknown): Promise<unknown>;
+  waitForFunction(pageFunction: string, opts?: unknown): Promise<unknown>;
   close(): Promise<void>;
 }
 
@@ -103,6 +105,35 @@ function toViolations(raw: unknown): AxeViolation[] {
   return Array.isArray(raw) ? (raw as RawAxeRule[]).map(toViolation) : [];
 }
 
+// axe's analyze() can throw "Page/Frame is not ready" when the page navigates
+// or redirects late (e.g. a www redirect) or under load from a concurrent
+// Lighthouse Chrome. Wait for the document to settle, and retry analyze() once.
+const FRAME_NOT_READY = /not ready|detached|frame|execution context|target closed|navigat/i;
+
+async function waitForReady(page: PageLike): Promise<void> {
+  try {
+    await page.waitForFunction('document.readyState === "complete"', { timeout: 15_000 });
+  } catch {
+    // best-effort; analyze() (and its retry) still runs
+  }
+}
+
+async function analyzeWithRetry(
+  AxePuppeteer: AxePuppeteerCtor,
+  page: PageLike,
+): Promise<RawAxeResults> {
+  try {
+    return await new AxePuppeteer(page).analyze();
+  } catch (err) {
+    if (!FRAME_NOT_READY.test(err instanceof Error ? err.message : String(err))) {
+      throw err;
+    }
+    await waitForReady(page);
+    await sleep(750);
+    return await new AxePuppeteer(page).analyze();
+  }
+}
+
 export const axePuppeteerAdapter: AxeAdapter = {
   isInstalled: () => moduleResolves('@axe-core/puppeteer'),
   async run(browser: ChromeBrowser, url: string): Promise<AxeResult> {
@@ -110,7 +141,8 @@ export const axePuppeteerAdapter: AxeAdapter = {
     const page = await (browser as BrowserLike).newPage();
     try {
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 30_000 });
-      const raw = await new mod.AxePuppeteer(page).analyze();
+      await waitForReady(page);
+      const raw = await analyzeWithRetry(mod.AxePuppeteer, page);
       return {
         violations: toViolations(raw.violations),
         passes: toViolations(raw.passes),
