@@ -52,4 +52,38 @@ describe('LighthouseResource', () => {
     const r = new LighthouseResource(URL, makeAdapter(true), SIGNAL);
     await expect(r.get()).resolves.toEqual(STUB_RESULT);
   });
+
+  test('default runs = 1 calls the adapter once', async () => {
+    let calls = 0;
+    const adapter: LighthouseAdapter = {
+      isInstalled: () => true,
+      run: async () => {
+        calls += 1;
+        return STUB_RESULT;
+      },
+    };
+    const r = new LighthouseResource(URL, adapter, SIGNAL);
+    await r.get();
+    expect(calls).toBe(1);
+  });
+
+  test('runs = 3 medians the performance score across three audits', async () => {
+    const scores = [0.5, 0.9, 0.7];
+    let i = 0;
+    const adapter: LighthouseAdapter = {
+      isInstalled: () => true,
+      run: async () => {
+        const score = scores[i] ?? 0;
+        i += 1;
+        return {
+          ...STUB_RESULT,
+          categories: { ...STUB_RESULT.categories, performance: { score } },
+        };
+      },
+    };
+    const r = new LighthouseResource(URL, adapter, SIGNAL, 3);
+    const result = await r.get();
+    expect(i).toBe(3);
+    expect(result.categories.performance.score).toBe(0.7);
+  });
 });

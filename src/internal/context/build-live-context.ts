@@ -21,6 +21,8 @@ export interface BuildLiveContextDeps {
   chromeAdapter?: ChromeAdapter;
   axeAdapter?: AxeAdapter;
   lighthouseAdapter?: LighthouseAdapter;
+  /** Lighthouse audit runs to median over (variance damping). Default 1. */
+  lighthouseRuns?: number;
 }
 
 /** A built live context plus a disposer that closes the browser if it was launched. */
@@ -47,6 +49,7 @@ export function buildLiveContext(url: string, deps: BuildLiveContextDeps = {}): 
     url,
     deps.lighthouseAdapter ?? defaultLighthouseAdapter,
     signal,
+    deps.lighthouseRuns ?? 1,
   );
   const live: LiveContext = {
     url,
