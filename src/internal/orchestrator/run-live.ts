@@ -114,7 +114,12 @@ export async function runLiveChecks(options: RunLiveChecksOptions): Promise<Chec
   );
   const mode: Mode = combined ? 'combined' : 'live';
   for (const url of targets) {
-    const { live, dispose } = buildLiveContext(url, { signal, ...(options.liveDeps ?? {}) });
+    const lighthouseRuns = config.thresholds['lighthouse-runs'] ?? 1;
+    const { live, dispose } = buildLiveContext(url, {
+      signal,
+      lighthouseRuns,
+      ...(options.liveDeps ?? {}),
+    });
     const ctx: CheckContext = { mode, project, live, config, logger, signal, meta };
     try {
       const arrays = await Promise.all(liveEligible.map((checker) => runOne(checker, ctx)));
