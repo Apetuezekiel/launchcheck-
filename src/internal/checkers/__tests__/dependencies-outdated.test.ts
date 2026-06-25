@@ -17,7 +17,8 @@ function ctxWith(pkg: PackageJson | null) {
 
 function deps(over: Partial<DependenciesOutdatedDeps>): DependenciesOutdatedDeps {
   return {
-    runNpmOutdated: async () => ({ stdout: '{}', exitCode: 0 }),
+    detectPm: async () => 'npm',
+    runOutdated: async () => ({ stdout: '{}', exitCode: 0 }),
     getDeprecation: async () => null,
     ...over,
   };
@@ -62,7 +63,7 @@ describe('dependenciesOutdatedChecker', () => {
       ctxWith({ dependencies: { left: '^1', other: '^1' } }),
       deps({
         getDeprecation: async (name) => (name === 'left' ? 'use right instead' : null),
-        runNpmOutdated: async () => ({
+        runOutdated: async () => ({
           stdout: JSON.stringify({ other: { current: '1.0.0', latest: '2.0.0' } }),
           exitCode: 1,
         }),
@@ -78,7 +79,7 @@ describe('dependenciesOutdatedChecker', () => {
     const r = await runDependenciesOutdated(
       ctxWith({ dependencies: { other: '^1' } }),
       deps({
-        runNpmOutdated: async () => ({
+        runOutdated: async () => ({
           stdout: JSON.stringify({ other: { current: '1.0.0', latest: '2.0.0' } }),
           exitCode: 1,
         }),
@@ -92,6 +93,68 @@ describe('dependenciesOutdatedChecker', () => {
   test('pass when current and none deprecated', async () => {
     const r = await runDependenciesOutdated(ctxWith({ dependencies: { other: '^1' } }), deps({}));
     expect(r[0]?.status).toBe('pass');
+    expect(r[0]?.resultId).toBe('dependencies-current');
+  });
+});
+
+describe('dependenciesOutdatedChecker — package-manager breadth', () => {
+  test('pnpm outdated object shape is parsed (info)', async () => {
+    const r = await runDependenciesOutdated(
+      ctxWith({ dependencies: { minimist: '^1' } }),
+      deps({
+        detectPm: async () => 'pnpm',
+        runOutdated: async (pm) => {
+          expect(pm).toBe('pnpm');
+          return {
+            stdout: JSON.stringify({
+              minimist: {
+                current: '1.2.0',
+                latest: '1.2.8',
+                wanted: '1.2.0',
+                dependencyType: 'dependencies',
+              },
+            }),
+            exitCode: 1,
+          };
+        },
+      }),
+    );
+    expect(r[0]?.resultId).toBe('outdated-dependencies');
+    expect(r[0]?.detail).toContain('minimist');
+  });
+
+  test('yarn classic NDJSON table shape is parsed (info)', async () => {
+    const yarnNdjson = [
+      JSON.stringify({ type: 'info', data: 'legend' }),
+      JSON.stringify({
+        type: 'table',
+        data: {
+          head: ['Package', 'Current', 'Wanted', 'Latest', 'Package Type', 'URL'],
+          body: [['minimist', '1.2.0', '1.2.0', '1.2.8', 'dependencies', 'https://x']],
+        },
+      }),
+    ].join('\n');
+    const r = await runDependenciesOutdated(
+      ctxWith({ dependencies: { minimist: '^1' } }),
+      deps({
+        detectPm: async () => 'yarn',
+        runOutdated: async () => ({ stdout: yarnNdjson, exitCode: 1 }),
+      }),
+    );
+    expect(r[0]?.resultId).toBe('outdated-dependencies');
+    expect(r[0]?.detail).toContain('minimist');
+  });
+
+  test('no lockfile → outdated check skipped, still passes on current deps', async () => {
+    const r = await runDependenciesOutdated(
+      ctxWith({ dependencies: { other: '^1' } }),
+      deps({
+        detectPm: async () => null,
+        runOutdated: async () => {
+          throw new Error('should not run without a lockfile');
+        },
+      }),
+    );
     expect(r[0]?.resultId).toBe('dependencies-current');
   });
 });

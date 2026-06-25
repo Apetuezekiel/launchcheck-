@@ -1,7 +1,18 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { request } from 'undici';
-import type { CheckContext, CheckResult, Checker, Severity } from '../../types/index.js';
+import type {
+  CheckContext,
+  CheckResult,
+  Checker,
+  ProjectContext,
+  Severity,
+} from '../../types/index.js';
+import {
+  type PackageManager,
+  detectPackageManager,
+  packageManagerBin,
+} from './support/package-manager.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -10,12 +21,19 @@ const CATEGORY = 'dependencies' as const;
 
 /** Dependencies — injectable for tests (no subprocess or network in unit tests). */
 export interface DependenciesOutdatedDeps {
+  /** Detects the project's package manager (lockfile-based). Null when none. */
+  detectPm(project: ProjectContext): Promise<PackageManager | null>;
+
   /**
-   * Runs `npm outdated --json` in `cwd`. Returns raw stdout and exit code.
-   * MUST NOT throw on non-zero exit (npm outdated exits 1 when packages are
+   * Runs `<pm> outdated --json` in `cwd`. Returns raw stdout and exit code.
+   * MUST NOT throw on non-zero exit (these tools exit 1 when packages are
    * outdated); MAY throw for environmental failures.
    */
-  runNpmOutdated(cwd: string, signal: AbortSignal): Promise<{ stdout: string; exitCode: number }>;
+  runOutdated(
+    pm: PackageManager,
+    cwd: string,
+    signal: AbortSignal,
+  ): Promise<{ stdout: string; exitCode: number }>;
 
   /**
    * Returns the deprecation message for `pkgName`'s latest version, or null
@@ -26,17 +44,18 @@ export interface DependenciesOutdatedDeps {
 }
 
 const DEFAULT_DEPS: DependenciesOutdatedDeps = {
-  runNpmOutdated: defaultRunNpmOutdated,
+  detectPm: async (project) => (await detectPackageManager(project))?.name ?? null,
+  runOutdated: defaultRunOutdated,
   getDeprecation: defaultGetDeprecation,
 };
 
-async function defaultRunNpmOutdated(
+async function defaultRunOutdated(
+  pm: PackageManager,
   cwd: string,
   signal: AbortSignal,
 ): Promise<{ stdout: string; exitCode: number }> {
-  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   try {
-    const result = await execFileAsync(npmCmd, ['outdated', '--json'], {
+    const result = await execFileAsync(packageManagerBin(pm), ['outdated', '--json'], {
       cwd,
       timeout: 60_000,
       maxBuffer: 50 * 1024 * 1024,
@@ -80,6 +99,40 @@ interface OutdatedEntry {
   latest?: string;
 }
 
+/**
+ * Normalizes each package manager's `outdated --json` to the set of outdated
+ * package names, intersected with the project's declared dependencies.
+ * - npm / pnpm: a JSON object keyed by package name.
+ * - yarn (classic): newline-delimited JSON; the `table` line's `data.body`
+ *   rows are `[name, current, wanted, latest, type, url]`.
+ */
+function parseOutdatedNames(pm: PackageManager, stdout: string, known: string[]): string[] {
+  const knownSet = new Set(known);
+  if (pm === 'yarn') {
+    for (const line of stdout.split('\n')) {
+      const trimmed = line.trim();
+      if (trimmed.length === 0) continue;
+      try {
+        const obj = JSON.parse(trimmed) as { type?: string; data?: { body?: unknown[] } };
+        if (obj.type === 'table' && Array.isArray(obj.data?.body)) {
+          return obj.data.body
+            .map((row) => (Array.isArray(row) ? row[0] : undefined))
+            .filter((n): n is string => typeof n === 'string' && knownSet.has(n));
+        }
+      } catch {
+        // skip non-JSON lines
+      }
+    }
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(stdout) as Record<string, OutdatedEntry>;
+    return Object.keys(parsed).filter((name) => knownSet.has(name));
+  } catch {
+    return [];
+  }
+}
+
 function makeResult(
   status: CheckResult['status'],
   resultId: string,
@@ -107,7 +160,7 @@ function makeResult(
 /**
  * Static checker core. Flags deprecated production dependencies (major) via a
  * per-package registry lookup, and reports merely-outdated ones (info) from
- * `npm outdated --json`. Emits a single consolidated result:
+ * `<pm> outdated --json`. Emits a single consolidated result:
  *   - 'skip' 'no-project-context' / 'aborted' / 'no-dependencies'
  *   - 'skip' 'registry-unreachable' when every deprecation lookup failed
  *   - 'warn' 'deprecated-dependencies' (major) when any dep is deprecated
@@ -158,16 +211,19 @@ export async function runDependenciesOutdated(
       }
     });
 
-    // Outdated (secondary, info-level). Degrade silently if it cannot run.
+    // Outdated (secondary, info-level). Needs a detected package manager;
+    // degrades silently if detection or the subprocess fails.
     let outdated: string[] = [];
-    try {
-      const { stdout } = await deps.runNpmOutdated(project.projectDir, ctx.signal);
-      if (stdout.trim() !== '') {
-        const parsed = JSON.parse(stdout) as Record<string, OutdatedEntry>;
-        outdated = Object.keys(parsed).filter((name) => names.includes(name));
+    const pmName = await deps.detectPm(project);
+    if (pmName !== null) {
+      try {
+        const { stdout } = await deps.runOutdated(pmName, project.projectDir, ctx.signal);
+        if (stdout.trim() !== '') {
+          outdated = parseOutdatedNames(pmName, stdout, names);
+        }
+      } catch {
+        outdated = [];
       }
-    } catch {
-      outdated = [];
     }
 
     if (deprecated.length > 0) {
@@ -196,7 +252,7 @@ export async function runDependenciesOutdated(
           `${outdated.length} outdated (but not deprecated) production dependency(ies).`,
           {
             detail: outdated.join('\n'),
-            fix: 'Update with `npm update` (or bump ranges in package.json) when convenient.',
+            fix: 'Update the affected packages (or bump ranges in package.json) when convenient.',
           },
         ),
       ];
