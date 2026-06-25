@@ -16,12 +16,13 @@ import {
   serializeBaseline,
 } from '../../internal/reporter/baseline.js';
 import { computeExitCode } from '../../internal/reporter/exit-code.js';
+import { formatHtml } from '../../internal/reporter/html.js';
 import { formatJunit } from '../../internal/reporter/junit.js';
 import { formatSarif } from '../../internal/reporter/sarif.js';
 import { formatTerminal } from '../../internal/reporter/terminal.js';
 import type { CheckResult, Checker } from '../../types/index.js';
 
-export type OutputFormat = 'terminal' | 'sarif' | 'junit';
+export type OutputFormat = 'terminal' | 'sarif' | 'junit' | 'html';
 
 /** Renders results in the requested format. */
 function formatResults(results: CheckResult[], format: OutputFormat, color: boolean): string {
@@ -30,6 +31,9 @@ function formatResults(results: CheckResult[], format: OutputFormat, color: bool
   }
   if (format === 'junit') {
     return formatJunit(results);
+  }
+  if (format === 'html') {
+    return formatHtml(results);
   }
   return formatTerminal(results, { color });
 }
@@ -266,7 +270,10 @@ export function registerScanCommand(program: Command): void {
     .option('--url <url>', 'URL to run live checks against (live or combined mode)')
     .option('--urls <list>', 'Comma-separated URLs to run live checks against (multi-URL)')
     .option('--no-color', 'Disable ANSI colors in output')
-    .option('--format <format>', 'Output format: terminal | sarif | junit (default: terminal)')
+    .option(
+      '--format <format>',
+      'Output format: terminal | sarif | junit | html (default: terminal)',
+    )
     .option('--baseline <file>', 'Baseline file; gate exit code on new findings only')
     .option('--update-baseline', 'Write current findings as the baseline and exit 0')
     .action(
@@ -281,9 +288,14 @@ export function registerScanCommand(program: Command): void {
       }) => {
         const colorEnabled = options.color !== false && process.stdout.isTTY === true;
         const format = options.format ?? 'terminal';
-        if (format !== 'terminal' && format !== 'sarif' && format !== 'junit') {
+        if (
+          format !== 'terminal' &&
+          format !== 'sarif' &&
+          format !== 'junit' &&
+          format !== 'html'
+        ) {
           process.stderr.write(
-            `error: invalid --format '${format}' (use terminal | sarif | junit)\n`,
+            `error: invalid --format '${format}' (use terminal | sarif | junit | html)\n`,
           );
           process.exit(2);
         }
