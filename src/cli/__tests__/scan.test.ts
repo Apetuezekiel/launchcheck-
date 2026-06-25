@@ -277,3 +277,68 @@ describe('runLiveScan URL discovery (sitemap + crawl)', () => {
     expect(res.exitCode).toBe(2);
   });
 });
+
+describe('runScan/runLiveScan F.3 flags', () => {
+  const liveStub = {
+    id: 'csp-present',
+    name: 'stub',
+    category: 'security' as const,
+    mode: 'live' as const,
+    run: async () => [
+      {
+        checkerId: 'csp-present',
+        resultId: 'stub',
+        status: 'pass' as const,
+        message: 'ok',
+        severity: 'major' as const,
+        category: 'security' as const,
+      },
+    ],
+  };
+  const staticStub = {
+    id: 'console-log-scan',
+    name: 'stub',
+    category: 'code-quality' as const,
+    mode: 'static' as const,
+    run: async () => [
+      {
+        checkerId: 'console-log-scan',
+        resultId: 'x',
+        status: 'fail' as const,
+        message: 'boom',
+        severity: 'critical' as const,
+        category: 'code-quality' as const,
+      },
+    ],
+  };
+  function http(body: string) {
+    return {
+      async fetch() {
+        return { body } as unknown as import('../../types/index.js').HttpResponse;
+      },
+    };
+  }
+
+  test('--summary prints only the failing finding + counts', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'lc-f3-'));
+    const res = await runScan({ projectDir: dir, checkers: [staticStub], summary: true });
+    expect(res.stdout).toContain('console-log-scan/x');
+    expect(res.stdout).toContain('Summary:');
+    expect(res.stdout).toContain('1 failed');
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  test('--max-sitemap-urls caps ingested URLs', async () => {
+    const xml =
+      '<urlset><url><loc>http://a.test/1</loc></url><url><loc>http://a.test/2</loc></url><url><loc>http://a.test/3</loc></url></urlset>';
+    const res = await runLiveScan({
+      sitemap: 'http://a.test/sitemap.xml',
+      httpClient: http(xml),
+      maxSitemapUrls: 1,
+      checkers: [liveStub],
+    });
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain('http://a.test/1');
+    expect(res.stdout).not.toContain('http://a.test/2');
+  });
+});

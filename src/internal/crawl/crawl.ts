@@ -44,6 +44,56 @@ export interface CrawlOptions {
   maxPages?: number;
   /** Per-fetch timeout. Default 8000ms. */
   timeoutMs?: number;
+  /** Honor the origin's robots.txt Disallow rules. Default true. */
+  respectRobots?: boolean;
+}
+
+/**
+ * Parses the `Disallow` path prefixes that apply to `User-agent: *` from a
+ * robots.txt body. Tolerant line parser; `Allow` and other agents are ignored,
+ * and an empty `Disallow:` (which means "allow all") contributes nothing.
+ */
+export function parseRobotsDisallow(robotsTxt: string): string[] {
+  const disallow: string[] = [];
+  let agents: string[] = [];
+  let sawDirective = false;
+  for (const raw of robotsTxt.split(/\r?\n/)) {
+    const line = raw.replace(/#.*/, '').trim();
+    if (line.length === 0) continue;
+    const idx = line.indexOf(':');
+    if (idx === -1) continue;
+    const key = line.slice(0, idx).trim().toLowerCase();
+    const value = line.slice(idx + 1).trim();
+    if (key === 'user-agent') {
+      if (sawDirective) {
+        agents = [];
+        sawDirective = false;
+      }
+      agents.push(value);
+    } else if (key === 'disallow') {
+      sawDirective = true;
+      if (agents.includes('*') && value.length > 0) disallow.push(value);
+    } else if (key === 'allow') {
+      sawDirective = true;
+    }
+  }
+  return disallow;
+}
+
+async function fetchRobotsDisallow(
+  http: HttpClient,
+  origin: string,
+  timeoutMs: number,
+): Promise<string[]> {
+  try {
+    const res = await http.fetch(`${origin}/robots.txt`, { timeoutMs });
+    if (res.status >= 200 && res.status < 300) {
+      return parseRobotsDisallow(res.body);
+    }
+  } catch {
+    // unreachable robots.txt → no restrictions
+  }
+  return [];
 }
 
 /**
@@ -63,6 +113,14 @@ export async function crawl(
   const start = normalize(seed);
   if (start === null) return [];
   const origin = new URL(start).origin;
+
+  const disallow =
+    options.respectRobots === false ? [] : await fetchRobotsDisallow(http, origin, timeoutMs);
+  const isAllowed = (u: string): boolean => {
+    const pathname = new URL(u).pathname;
+    return !disallow.some((prefix) => pathname.startsWith(prefix));
+  };
+  if (!isAllowed(start)) return [];
 
   const visited = new Set<string>();
   const queued = new Set<string>([start]);
@@ -89,6 +147,7 @@ export async function crawl(
 
     for (const link of extractLinks(html, url)) {
       if (new URL(link).origin !== origin) continue;
+      if (!isAllowed(link)) continue;
       if (queued.has(link) || visited.has(link)) continue;
       queued.add(link);
       queue.push(link);

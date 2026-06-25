@@ -8,6 +8,11 @@ export interface FormatTerminalOptions {
    * The CLI flips this to true when stdout.isTTY.
    */
   color?: boolean;
+  /**
+   * Summary mode: print only fail/warn findings, one terse line each, plus the
+   * counts line. A quick triage view; pass/skip are omitted.
+   */
+  summary?: boolean;
 }
 
 const ANSI = {
@@ -62,6 +67,32 @@ export function formatTerminal(
     return 'launchcheck: no results.\n';
   }
 
+  const counts = { pass: 0, fail: 0, warn: 0, skip: 0 };
+  for (const r of results) {
+    counts[r.status] += 1;
+  }
+  const summaryLine = `Summary: ${c.green(`${counts.pass} passed`)}, ${c.red(`${counts.fail} failed`)}, ${c.yellow(`${counts.warn} warned`)}, ${c.gray(`${counts.skip} skipped`)}`;
+
+  if (options.summary === true) {
+    const problems = results
+      .filter((r) => r.status === 'fail' || r.status === 'warn')
+      .sort(compareResults);
+    const out: string[] = [];
+    for (const r of problems) {
+      const where =
+        r.url !== undefined
+          ? ` ${r.url}`
+          : r.location !== undefined
+            ? ` ${formatLocation(r.location)}`
+            : '';
+      out.push(
+        `${statusGlyph(r.status, c)}  ${c.bold(`${r.checkerId}/${r.resultId}`)}${c.dim(where)}  ${r.message}`,
+      );
+    }
+    out.push(summaryLine);
+    return `${out.join('\n')}\n`;
+  }
+
   const grouped = new Map<string, CheckResult[]>();
   for (const r of results) {
     const arr = grouped.get(r.category);
@@ -88,13 +119,7 @@ export function formatTerminal(
     lines.push('');
   }
 
-  const counts = { pass: 0, fail: 0, warn: 0, skip: 0 };
-  for (const r of results) {
-    counts[r.status] += 1;
-  }
-  lines.push(
-    `Summary: ${c.green(`${counts.pass} passed`)}, ${c.red(`${counts.fail} failed`)}, ${c.yellow(`${counts.warn} warned`)}, ${c.gray(`${counts.skip} skipped`)}`,
-  );
+  lines.push(summaryLine);
 
   return `${lines.join('\n')}\n`;
 }

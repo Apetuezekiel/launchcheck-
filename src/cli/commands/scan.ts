@@ -28,7 +28,12 @@ import type { CheckResult, Checker, HttpClient } from '../../types/index.js';
 export type OutputFormat = 'terminal' | 'sarif' | 'junit' | 'html';
 
 /** Renders results in the requested format. */
-function formatResults(results: CheckResult[], format: OutputFormat, color: boolean): string {
+function formatResults(
+  results: CheckResult[],
+  format: OutputFormat,
+  color: boolean,
+  summary: boolean,
+): string {
   if (format === 'sarif') {
     return formatSarif(results);
   }
@@ -38,7 +43,7 @@ function formatResults(results: CheckResult[], format: OutputFormat, color: bool
   if (format === 'html') {
     return formatHtml(results);
   }
-  return formatTerminal(results, { color });
+  return formatTerminal(results, { color, summary });
 }
 
 const DEFAULT_BASELINE = '.launchcheck-baseline.json';
@@ -53,6 +58,7 @@ async function finalize(
   results: CheckResult[],
   format: OutputFormat,
   color: boolean,
+  summary: boolean,
   baseDir: string,
   baseline: string | undefined,
   updateBaseline: boolean,
@@ -64,7 +70,7 @@ async function finalize(
   }
   if (baseline === undefined) {
     return {
-      stdout: formatResults(results, format, color),
+      stdout: formatResults(results, format, color, summary),
       stderr: '',
       exitCode: computeExitCode(results),
     };
@@ -89,8 +95,8 @@ async function finalize(
   const diff = diffBaseline(results, accepted);
   const stdout =
     format === 'terminal'
-      ? `${formatResults(results, format, color)}\n${baselineSummary(diff)}\n`
-      : formatResults(results, format, color);
+      ? `${formatResults(results, format, color, summary)}\n${baselineSummary(diff)}\n`
+      : formatResults(results, format, color, summary);
   return { stdout, stderr: '', exitCode: baselineExitCode(diff) };
 }
 
@@ -102,6 +108,8 @@ export interface ScanOptions {
   color?: boolean;
   /** Output format. Default: 'terminal'. */
   format?: OutputFormat;
+  /** Terminal summary mode: only fail/warn findings + counts. */
+  summary?: boolean;
   /** Path to a baseline file; gate exit code on new findings only. */
   baseline?: string;
   /** Write the current findings as the baseline and exit 0. */
@@ -122,6 +130,12 @@ export interface LiveScanOptions {
   crawl?: boolean;
   /** Cap for --crawl page discovery. Default 20. */
   maxPages?: number;
+  /** Cap for --sitemap URL ingestion. Default 50. */
+  maxSitemapUrls?: number;
+  /** Honor robots.txt during --crawl. Default true. */
+  respectRobots?: boolean;
+  /** Terminal summary mode: only fail/warn findings + counts. */
+  summary?: boolean;
   /** Test seam: HttpClient used for sitemap/crawl URL discovery. */
   httpClient?: HttpClient;
   /** When provided, the run is 'combined' (static + live); otherwise 'live'. */
@@ -181,6 +195,7 @@ export async function runScan(options: ScanOptions = {}): Promise<ScanResult> {
     results,
     options.format ?? 'terminal',
     color,
+    options.summary ?? false,
     projectDir,
     options.baseline,
     options.updateBaseline ?? false,
@@ -209,14 +224,18 @@ export async function runLiveScan(options: LiveScanOptions): Promise<ScanResult>
     const http = options.httpClient ?? new DefaultHttpClient();
     try {
       if (options.sitemap !== undefined) {
-        discovered.push(...(await collectSitemapUrls(http, options.sitemap)));
+        const sitemapOpts =
+          options.maxSitemapUrls !== undefined ? { maxUrls: options.maxSitemapUrls } : {};
+        discovered.push(...(await collectSitemapUrls(http, options.sitemap, sitemapOpts)));
       }
       if (options.crawl === true) {
         const seed = explicit[0] ?? options.url;
         if (seed === undefined) {
           return { stdout: '', stderr: 'error: --crawl requires --url (a seed)\n', exitCode: 2 };
         }
-        const crawlOpts = options.maxPages !== undefined ? { maxPages: options.maxPages } : {};
+        const crawlOpts: { maxPages?: number; respectRobots?: boolean } = {};
+        if (options.maxPages !== undefined) crawlOpts.maxPages = options.maxPages;
+        if (options.respectRobots === false) crawlOpts.respectRobots = false;
         discovered.push(...(await crawl(http, seed, crawlOpts)));
       }
     } catch (err) {
@@ -290,6 +309,7 @@ export async function runLiveScan(options: LiveScanOptions): Promise<ScanResult>
     results,
     options.format ?? 'terminal',
     color,
+    options.summary ?? false,
     options.projectDir !== undefined ? path.resolve(options.projectDir) : process.cwd(),
     options.baseline,
     options.updateBaseline ?? false,
@@ -317,6 +337,9 @@ export function registerScanCommand(program: Command): void {
     .option('--sitemap <url>', 'Fetch a sitemap.xml and scan the page URLs it lists')
     .option('--crawl', 'Crawl same-origin links from the seed --url (bounded)')
     .option('--max-pages <n>', 'Max pages for --crawl discovery (default 20)')
+    .option('--max-sitemap-urls <n>', 'Max URLs ingested from --sitemap (default 50)')
+    .option('--no-robots', 'Ignore robots.txt during --crawl')
+    .option('--summary', 'Terminal: print only fail/warn findings and the counts line')
     .option('--no-color', 'Disable ANSI colors in output')
     .option(
       '--format <format>',
@@ -332,6 +355,9 @@ export function registerScanCommand(program: Command): void {
         sitemap?: string;
         crawl?: boolean;
         maxPages?: string;
+        maxSitemapUrls?: string;
+        robots?: boolean;
+        summary?: boolean;
         color?: boolean;
         format?: string;
         baseline?: string;
@@ -386,6 +412,19 @@ export function registerScanCommand(program: Command): void {
           if (maxPagesNum !== undefined && Number.isFinite(maxPagesNum) && maxPagesNum > 0) {
             liveOptions.maxPages = maxPagesNum;
           }
+          const maxSitemapNum =
+            options.maxSitemapUrls !== undefined
+              ? Number.parseInt(options.maxSitemapUrls, 10)
+              : undefined;
+          if (maxSitemapNum !== undefined && Number.isFinite(maxSitemapNum) && maxSitemapNum > 0) {
+            liveOptions.maxSitemapUrls = maxSitemapNum;
+          }
+          if (options.robots === false) {
+            liveOptions.respectRobots = false;
+          }
+          if (options.summary === true) {
+            liveOptions.summary = true;
+          }
           if (options.projectDir !== undefined) {
             liveOptions.projectDir = options.projectDir;
           }
@@ -398,6 +437,9 @@ export function registerScanCommand(program: Command): void {
           result = await runLiveScan(liveOptions);
         } else {
           const runOptions: ScanOptions = { color: colorEnabled, format };
+          if (options.summary === true) {
+            runOptions.summary = true;
+          }
           if (options.projectDir !== undefined) {
             runOptions.projectDir = options.projectDir;
           }
