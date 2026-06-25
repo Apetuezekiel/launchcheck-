@@ -1,4 +1,5 @@
 import type { CheckContext, CheckResult, Checker } from '../../types/index.js';
+import { extractModuleSpecifiers, parseSource } from '../analysis/parse-source.js';
 
 const ID = 'unused-dependencies';
 const CAT = 'dependencies' as const;
@@ -129,8 +130,15 @@ export const unusedDependenciesChecker: Checker = {
         } catch {
           continue;
         }
-        for (const name of extractImports(content)) {
-          used.add(name);
+        const parsed = await parseSource(absPath, content);
+        if (parsed !== null) {
+          for (const spec of extractModuleSpecifiers(parsed)) {
+            const name = packageNameOf(spec);
+            if (name !== null) used.add(name);
+          }
+        } else {
+          // typescript peer absent or file unparseable: fall back to the regex scan.
+          for (const name of extractImports(content)) used.add(name);
         }
       }
 

@@ -1,5 +1,6 @@
 import * as path from 'node:path';
 import type { CheckContext, CheckResult, Checker } from '../../types/index.js';
+import { findConsoleAndDebugger, parseSource } from '../analysis/parse-source.js';
 
 const CHECKER_ID = 'console-log-scan';
 const RESULT_ID = 'no-console-statements';
@@ -154,7 +155,15 @@ export const consoleLogScanChecker: Checker = {
         } catch {
           continue;
         }
-        occurrences.push(...scanText(relPath, content));
+        const parsed = await parseSource(relPath, content);
+        if (parsed !== null) {
+          for (const occ of findConsoleAndDebugger(parsed)) {
+            occurrences.push({ file: relPath, line: occ.line, column: occ.column, text: occ.text });
+          }
+        } else {
+          // typescript peer absent or file unparseable: fall back to the textual scan.
+          occurrences.push(...scanText(relPath, content));
+        }
       }
 
       if (occurrences.length === 0) {

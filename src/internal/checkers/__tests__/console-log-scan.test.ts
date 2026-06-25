@@ -28,6 +28,20 @@ async function runChecker(signal?: AbortSignal) {
 }
 
 describe('consoleLogScanChecker', () => {
+  test('does not flag console/debugger inside strings or comments (AST)', async () => {
+    await write(
+      'src/clean.ts',
+      [
+        'export const s = "console.log not real";',
+        '// console.warn in a comment',
+        '/* debugger here is a comment */',
+        'export const t = `console.error template`;',
+      ].join('\n'),
+    );
+    const results = await runChecker();
+    expect(results[0]?.status).toBe('pass');
+  });
+
   test('id, name, category, and mode match the registry entry', () => {
     const entry = findById('console-log-scan');
     expect(entry).toBeDefined();
