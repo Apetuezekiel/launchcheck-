@@ -1,3 +1,4 @@
+import { readFile, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import type { Command } from 'commander';
 import { ConfigError, type RawConfig, loadConfigFile } from '../../internal/config/load.js';
@@ -7,6 +8,13 @@ import {
   type RunStaticChecksOptions,
   runStaticChecks,
 } from '../../internal/orchestrator/run-static.js';
+import {
+  baselineExitCode,
+  baselineSummary,
+  diffBaseline,
+  parseBaseline,
+  serializeBaseline,
+} from '../../internal/reporter/baseline.js';
 import { computeExitCode } from '../../internal/reporter/exit-code.js';
 import { formatJunit } from '../../internal/reporter/junit.js';
 import { formatSarif } from '../../internal/reporter/sarif.js';
@@ -26,6 +34,59 @@ function formatResults(results: CheckResult[], format: OutputFormat, color: bool
   return formatTerminal(results, { color });
 }
 
+const DEFAULT_BASELINE = '.launchcheck-baseline.json';
+
+/**
+ * Produces the final ScanResult: applies the baseline gate when requested.
+ * - updateBaseline: write the current findings' fingerprints and exit 0.
+ * - baseline: gate the exit code on NEW findings only; append a summary in
+ *   terminal mode. A missing/invalid baseline file is a usage error (exit 2).
+ */
+async function finalize(
+  results: CheckResult[],
+  format: OutputFormat,
+  color: boolean,
+  baseDir: string,
+  baseline: string | undefined,
+  updateBaseline: boolean,
+): Promise<ScanResult> {
+  if (updateBaseline) {
+    const target = path.resolve(baseDir, baseline ?? DEFAULT_BASELINE);
+    await writeFile(target, serializeBaseline(results));
+    return { stdout: `Wrote baseline to ${target}\n`, stderr: '', exitCode: 0 };
+  }
+  if (baseline === undefined) {
+    return {
+      stdout: formatResults(results, format, color),
+      stderr: '',
+      exitCode: computeExitCode(results),
+    };
+  }
+  const target = path.resolve(baseDir, baseline);
+  let text: string;
+  try {
+    text = await readFile(target, 'utf8');
+  } catch {
+    return {
+      stdout: '',
+      stderr: `error: baseline file not found: ${target} (run --update-baseline to create it)\n`,
+      exitCode: 2,
+    };
+  }
+  let accepted: Set<string>;
+  try {
+    accepted = parseBaseline(text);
+  } catch (err) {
+    return { stdout: '', stderr: formatGenericError(err), exitCode: 2 };
+  }
+  const diff = diffBaseline(results, accepted);
+  const stdout =
+    format === 'terminal'
+      ? `${formatResults(results, format, color)}\n${baselineSummary(diff)}\n`
+      : formatResults(results, format, color);
+  return { stdout, stderr: '', exitCode: baselineExitCode(diff) };
+}
+
 /** Options for runScan (static mode). */
 export interface ScanOptions {
   /** Project directory to scan. Default: process.cwd(). */
@@ -34,6 +95,10 @@ export interface ScanOptions {
   color?: boolean;
   /** Output format. Default: 'terminal'. */
   format?: OutputFormat;
+  /** Path to a baseline file; gate exit code on new findings only. */
+  baseline?: string;
+  /** Write the current findings as the baseline and exit 0. */
+  updateBaseline?: boolean;
   /** Test-only override of ALL_CHECKERS; still validated against the registry. */
   checkers?: ReadonlyArray<Checker>;
 }
@@ -48,6 +113,10 @@ export interface LiveScanOptions {
   color?: boolean;
   /** Output format. Default: 'terminal'. */
   format?: OutputFormat;
+  /** Path to a baseline file; gate exit code on new findings only. */
+  baseline?: string;
+  /** Write the current findings as the baseline and exit 0. */
+  updateBaseline?: boolean;
   /** Test-only override of ALL_CHECKERS. */
   checkers?: ReadonlyArray<Checker>;
 }
@@ -91,11 +160,14 @@ export async function runScan(options: ScanOptions = {}): Promise<ScanResult> {
     return { stdout: '', stderr: formatGenericError(err), exitCode: 2 };
   }
 
-  return {
-    stdout: formatResults(results, options.format ?? 'terminal', color),
-    stderr: '',
-    exitCode: computeExitCode(results),
-  };
+  return finalize(
+    results,
+    options.format ?? 'terminal',
+    color,
+    projectDir,
+    options.baseline,
+    options.updateBaseline ?? false,
+  );
 }
 
 /**
@@ -152,11 +224,14 @@ export async function runLiveScan(options: LiveScanOptions): Promise<ScanResult>
     return { stdout: '', stderr: formatGenericError(err), exitCode: 2 };
   }
 
-  return {
-    stdout: formatResults(results, options.format ?? 'terminal', color),
-    stderr: '',
-    exitCode: computeExitCode(results),
-  };
+  return finalize(
+    results,
+    options.format ?? 'terminal',
+    color,
+    options.projectDir !== undefined ? path.resolve(options.projectDir) : process.cwd(),
+    options.baseline,
+    options.updateBaseline ?? false,
+  );
 }
 
 function formatConfigError(err: ConfigError): string {
@@ -178,12 +253,16 @@ export function registerScanCommand(program: Command): void {
     .option('--url <url>', 'URL to run live checks against (live or combined mode)')
     .option('--no-color', 'Disable ANSI colors in output')
     .option('--format <format>', 'Output format: terminal | sarif | junit (default: terminal)')
+    .option('--baseline <file>', 'Baseline file; gate exit code on new findings only')
+    .option('--update-baseline', 'Write current findings as the baseline and exit 0')
     .action(
       async (options: {
         projectDir?: string;
         url?: string;
         color?: boolean;
         format?: string;
+        baseline?: string;
+        updateBaseline?: boolean;
       }) => {
         const colorEnabled = options.color !== false && process.stdout.isTTY === true;
         const format = options.format ?? 'terminal';
@@ -201,11 +280,23 @@ export function registerScanCommand(program: Command): void {
           if (options.projectDir !== undefined) {
             liveOptions.projectDir = options.projectDir;
           }
+          if (options.baseline !== undefined) {
+            liveOptions.baseline = options.baseline;
+          }
+          if (options.updateBaseline === true) {
+            liveOptions.updateBaseline = true;
+          }
           result = await runLiveScan(liveOptions);
         } else {
           const runOptions: ScanOptions = { color: colorEnabled, format };
           if (options.projectDir !== undefined) {
             runOptions.projectDir = options.projectDir;
+          }
+          if (options.baseline !== undefined) {
+            runOptions.baseline = options.baseline;
+          }
+          if (options.updateBaseline === true) {
+            runOptions.updateBaseline = true;
           }
           result = await runScan(runOptions);
         }
