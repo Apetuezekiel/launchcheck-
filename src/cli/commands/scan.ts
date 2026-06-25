@@ -8,8 +8,23 @@ import {
   runStaticChecks,
 } from '../../internal/orchestrator/run-static.js';
 import { computeExitCode } from '../../internal/reporter/exit-code.js';
+import { formatJunit } from '../../internal/reporter/junit.js';
+import { formatSarif } from '../../internal/reporter/sarif.js';
 import { formatTerminal } from '../../internal/reporter/terminal.js';
 import type { CheckResult, Checker } from '../../types/index.js';
+
+export type OutputFormat = 'terminal' | 'sarif' | 'junit';
+
+/** Renders results in the requested format. */
+function formatResults(results: CheckResult[], format: OutputFormat, color: boolean): string {
+  if (format === 'sarif') {
+    return formatSarif(results);
+  }
+  if (format === 'junit') {
+    return formatJunit(results);
+  }
+  return formatTerminal(results, { color });
+}
 
 /** Options for runScan (static mode). */
 export interface ScanOptions {
@@ -17,6 +32,8 @@ export interface ScanOptions {
   projectDir?: string;
   /** ANSI colors in stdout. Default: false. */
   color?: boolean;
+  /** Output format. Default: 'terminal'. */
+  format?: OutputFormat;
   /** Test-only override of ALL_CHECKERS; still validated against the registry. */
   checkers?: ReadonlyArray<Checker>;
 }
@@ -29,6 +46,8 @@ export interface LiveScanOptions {
   projectDir?: string;
   /** ANSI colors in stdout. Default: false. */
   color?: boolean;
+  /** Output format. Default: 'terminal'. */
+  format?: OutputFormat;
   /** Test-only override of ALL_CHECKERS. */
   checkers?: ReadonlyArray<Checker>;
 }
@@ -73,7 +92,7 @@ export async function runScan(options: ScanOptions = {}): Promise<ScanResult> {
   }
 
   return {
-    stdout: formatTerminal(results, { color }),
+    stdout: formatResults(results, options.format ?? 'terminal', color),
     stderr: '',
     exitCode: computeExitCode(results),
   };
@@ -134,7 +153,7 @@ export async function runLiveScan(options: LiveScanOptions): Promise<ScanResult>
   }
 
   return {
-    stdout: formatTerminal(results, { color }),
+    stdout: formatResults(results, options.format ?? 'terminal', color),
     stderr: '',
     exitCode: computeExitCode(results),
   };
@@ -158,27 +177,42 @@ export function registerScanCommand(program: Command): void {
     .option('--project-dir <path>', 'Path to the project directory (default: cwd)')
     .option('--url <url>', 'URL to run live checks against (live or combined mode)')
     .option('--no-color', 'Disable ANSI colors in output')
-    .action(async (options: { projectDir?: string; url?: string; color?: boolean }) => {
-      const colorEnabled = options.color !== false && process.stdout.isTTY === true;
-
-      let result: ScanResult;
-      if (options.url !== undefined) {
-        // live (url only) or combined (url + explicit project-dir)
-        const liveOptions: LiveScanOptions = { url: options.url, color: colorEnabled };
-        if (options.projectDir !== undefined) {
-          liveOptions.projectDir = options.projectDir;
+    .option('--format <format>', 'Output format: terminal | sarif | junit (default: terminal)')
+    .action(
+      async (options: {
+        projectDir?: string;
+        url?: string;
+        color?: boolean;
+        format?: string;
+      }) => {
+        const colorEnabled = options.color !== false && process.stdout.isTTY === true;
+        const format = options.format ?? 'terminal';
+        if (format !== 'terminal' && format !== 'sarif' && format !== 'junit') {
+          process.stderr.write(
+            `error: invalid --format '${format}' (use terminal | sarif | junit)\n`,
+          );
+          process.exit(2);
         }
-        result = await runLiveScan(liveOptions);
-      } else {
-        const runOptions: ScanOptions = { color: colorEnabled };
-        if (options.projectDir !== undefined) {
-          runOptions.projectDir = options.projectDir;
-        }
-        result = await runScan(runOptions);
-      }
 
-      if (result.stdout.length > 0) process.stdout.write(result.stdout);
-      if (result.stderr.length > 0) process.stderr.write(result.stderr);
-      process.exit(result.exitCode);
-    });
+        let result: ScanResult;
+        if (options.url !== undefined) {
+          // live (url only) or combined (url + explicit project-dir)
+          const liveOptions: LiveScanOptions = { url: options.url, color: colorEnabled, format };
+          if (options.projectDir !== undefined) {
+            liveOptions.projectDir = options.projectDir;
+          }
+          result = await runLiveScan(liveOptions);
+        } else {
+          const runOptions: ScanOptions = { color: colorEnabled, format };
+          if (options.projectDir !== undefined) {
+            runOptions.projectDir = options.projectDir;
+          }
+          result = await runScan(runOptions);
+        }
+
+        if (result.stdout.length > 0) process.stdout.write(result.stdout);
+        if (result.stderr.length > 0) process.stderr.write(result.stderr);
+        process.exit(result.exitCode);
+      },
+    );
 }
