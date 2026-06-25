@@ -47,6 +47,7 @@ export function buildLiveContext(url: string, deps: BuildLiveContextDeps = {}): 
   const axe = new AxeResource(chrome, url, deps.axeAdapter ?? axePuppeteerAdapter, signal);
   const lighthouse = new LighthouseResource(
     url,
+    chrome,
     deps.lighthouseAdapter ?? defaultLighthouseAdapter,
     signal,
     deps.lighthouseRuns ?? 1,

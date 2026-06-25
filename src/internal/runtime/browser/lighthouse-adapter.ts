@@ -1,12 +1,16 @@
 import { createRequire } from 'node:module';
 import type { LighthouseResult } from '../../../types/index.js';
+import type { ChromeBrowser } from '../resources/chrome.js';
 import type { LighthouseAdapter } from '../resources/lighthouse.js';
 /**
- * Real adapter over the optional `lighthouse` peer dependency (which bundles
- * chrome-launcher + puppeteer-core). The ONLY lighthouse-touching module:
- * dynamic-import-only (so the build never requires lighthouse) and validated by
- * real-site dogfooding, not unit tests. Launches its own headless Chrome via
- * chrome-launcher, runs the audit, and always kills Chrome.
+ * Real adapter over the optional `lighthouse` peer dependency. The ONLY
+ * lighthouse-touching module: dynamic-import-only (so the build never requires
+ * lighthouse) and validated by real-site dogfooding, not unit tests.
+ *
+ * Epic C: attaches to the SHARED puppeteer browser via its CDP debug port
+ * (parsed from `browser.wsEndpoint()`) instead of self-launching Chrome via
+ * chrome-launcher. One Chrome process is shared with axe; this adapter no
+ * longer launches or kills a browser.
  */
 function moduleResolves(name: string): boolean {
   try {
@@ -19,13 +23,6 @@ function moduleResolves(name: string): boolean {
 async function importOptional(name: string): Promise<unknown> {
   const specifier = name;
   return import(specifier);
-}
-interface ChromeInstance {
-  port: number;
-  kill(): Promise<void>;
-}
-interface ChromeLauncherLike {
-  launch(opts: unknown): Promise<ChromeInstance>;
 }
 type LighthouseFn = (url: string, opts: unknown) => Promise<{ lhr?: RawLhr } | undefined>;
 interface RawCategory {
@@ -45,48 +42,49 @@ function score(category: RawCategory | undefined): number {
 function numeric(audit: RawAudit | undefined): number {
   return typeof audit?.numericValue === 'number' ? audit.numericValue : 0;
 }
+/** Extracts the CDP debug port from a puppeteer browser's ws endpoint. */
+function debugPort(browser: ChromeBrowser): number {
+  const wsEndpoint = (browser as { wsEndpoint(): string }).wsEndpoint();
+  const port = Number.parseInt(new URL(wsEndpoint).port, 10);
+  if (!Number.isFinite(port) || port <= 0) {
+    throw new Error(`could not determine Chrome debug port from ws endpoint: ${wsEndpoint}`);
+  }
+  return port;
+}
 export const lighthouseAdapter: LighthouseAdapter = {
   isInstalled: () => moduleResolves('lighthouse'),
-  async run(url: string): Promise<LighthouseResult> {
-    const chromeLauncher = (await importOptional('chrome-launcher')) as ChromeLauncherLike;
+  async run(browser: ChromeBrowser, url: string): Promise<LighthouseResult> {
     const lighthouseMod = (await importOptional('lighthouse')) as {
       default?: LighthouseFn;
     } & LighthouseFn;
     const runLighthouse = lighthouseMod.default ?? lighthouseMod;
-    const chrome = await chromeLauncher.launch({
-      chromeFlags: ['--headless', '--no-sandbox', '--disable-setuid-sandbox'],
+    const result = await runLighthouse(url, {
+      port: debugPort(browser),
+      output: 'json',
+      logLevel: 'error',
     });
-    try {
-      const result = await runLighthouse(url, {
-        port: chrome.port,
-        output: 'json',
-        logLevel: 'error',
-      });
-      const lhr: RawLhr = result?.lhr ?? {};
-      const cats = lhr.categories ?? {};
-      const audits = lhr.audits ?? {};
-      const inp = audits['interaction-to-next-paint'];
-      return {
-        categories: {
-          performance: { score: score(cats.performance) },
-          accessibility: { score: score(cats.accessibility) },
-          'best-practices': { score: score(cats['best-practices']) },
-          seo: { score: score(cats.seo) },
+    const lhr: RawLhr = result?.lhr ?? {};
+    const cats = lhr.categories ?? {};
+    const audits = lhr.audits ?? {};
+    const inp = audits['interaction-to-next-paint'];
+    return {
+      categories: {
+        performance: { score: score(cats.performance) },
+        accessibility: { score: score(cats.accessibility) },
+        'best-practices': { score: score(cats['best-practices']) },
+        seo: { score: score(cats.seo) },
+      },
+      audits: {
+        'largest-contentful-paint': {
+          numericValue: numeric(audits['largest-contentful-paint']),
         },
-        audits: {
-          'largest-contentful-paint': {
-            numericValue: numeric(audits['largest-contentful-paint']),
-          },
-          'cumulative-layout-shift': {
-            numericValue: numeric(audits['cumulative-layout-shift']),
-          },
-          ...(inp !== undefined
-            ? { 'interaction-to-next-paint': { numericValue: numeric(inp) } }
-            : {}),
+        'cumulative-layout-shift': {
+          numericValue: numeric(audits['cumulative-layout-shift']),
         },
-      };
-    } finally {
-      await chrome.kill();
-    }
+        ...(inp !== undefined
+          ? { 'interaction-to-next-paint': { numericValue: numeric(inp) } }
+          : {}),
+      },
+    };
   },
 };
