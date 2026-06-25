@@ -1,34 +1,40 @@
 import { execFile } from 'node:child_process';
-import * as path from 'node:path';
 import { promisify } from 'node:util';
 import type { CheckContext, CheckResult, Checker } from '../../types/index.js';
+import {
+  type PackageManager,
+  detectPackageManager,
+  packageManagerBin,
+} from './support/package-manager.js';
 
 const ID = 'npm-audit';
 const CAT = 'dependencies' as const;
 const SEV_CRITICAL = 'critical' as const;
 const SEV_MAJOR = 'major' as const;
 
-const NPM_LOCKFILES = ['package-lock.json', 'npm-shrinkwrap.json'] as const;
-
 /** Dependencies — injectable for tests. */
 export interface NpmAuditDeps {
   /**
-   * Runs `npm audit --json` in `cwd`. Returns stdout and exit code.
-   * MUST NOT throw on non-zero exit (npm exits 1 when vulnerabilities found).
-   * MAY throw for environmental failures (ENOENT, ETIMEDOUT, abort signal).
+   * Runs `<pm> audit --json` in `cwd`. Returns stdout and exit code.
+   * MUST NOT throw on non-zero exit (the tools exit 1 when vulnerabilities are
+   * found). MAY throw for environmental failures (ENOENT, ETIMEDOUT, abort).
    */
-  runNpmAudit(cwd: string, signal: AbortSignal): Promise<{ stdout: string; exitCode: number }>;
+  runAudit(
+    pm: PackageManager,
+    cwd: string,
+    signal: AbortSignal,
+  ): Promise<{ stdout: string; exitCode: number }>;
 }
 
 const execFileAsync = promisify(execFile);
 
-async function defaultRunNpmAudit(
+async function defaultRunAudit(
+  pm: PackageManager,
   cwd: string,
   signal: AbortSignal,
 ): Promise<{ stdout: string; exitCode: number }> {
-  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   try {
-    const result = await execFileAsync(npmCmd, ['audit', '--json'], {
+    const result = await execFileAsync(packageManagerBin(pm), ['audit', '--json'], {
       cwd,
       timeout: 60_000,
       maxBuffer: 50 * 1024 * 1024,
@@ -41,24 +47,61 @@ async function defaultRunNpmAudit(
     if (typeof err === 'object' && err !== null) {
       const e = err as { code?: unknown; stdout?: unknown };
       if (typeof e.code === 'number') {
-        return {
-          stdout: typeof e.stdout === 'string' ? e.stdout : '',
-          exitCode: e.code,
-        };
+        return { stdout: typeof e.stdout === 'string' ? e.stdout : '', exitCode: e.code };
       }
     }
     throw err;
   }
 }
 
-const DEFAULT_DEPS: NpmAuditDeps = { runNpmAudit: defaultRunNpmAudit };
+const DEFAULT_DEPS: NpmAuditDeps = { runAudit: defaultRunAudit };
 
 interface VulnCounts {
   critical?: number;
   high?: number;
-  moderate?: number;
-  low?: number;
-  info?: number;
+}
+
+function num(value: unknown): number {
+  return typeof value === 'number' ? value : 0;
+}
+
+/**
+ * Normalizes each package manager's audit JSON to {critical, high} counts.
+ * - npm / pnpm: a single JSON object with `metadata.vulnerabilities`.
+ * - yarn (classic): newline-delimited JSON; the `auditSummary` line carries
+ *   `data.vulnerabilities`.
+ * Returns null when the output cannot be parsed (→ runtime error).
+ */
+function parseVulnCounts(
+  pm: PackageManager,
+  stdout: string,
+): { critical: number; high: number } | null {
+  if (pm === 'yarn') {
+    for (const line of stdout.split('\n')) {
+      const trimmed = line.trim();
+      if (trimmed.length === 0) continue;
+      try {
+        const obj = JSON.parse(trimmed) as {
+          type?: string;
+          data?: { vulnerabilities?: VulnCounts };
+        };
+        if (obj.type === 'auditSummary') {
+          const v = obj.data?.vulnerabilities ?? {};
+          return { critical: num(v.critical), high: num(v.high) };
+        }
+      } catch {
+        // skip non-JSON lines
+      }
+    }
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(stdout) as { metadata?: { vulnerabilities?: VulnCounts } };
+    const v = parsed.metadata?.vulnerabilities ?? {};
+    return { critical: num(v.critical), high: num(v.high) };
+  } catch {
+    return null;
+  }
 }
 
 function makeResult(
@@ -68,29 +111,22 @@ function makeResult(
   severity: CheckResult['severity'],
   extras: { fix?: string; detail?: string } = {},
 ): CheckResult {
-  const r: CheckResult = {
-    checkerId: ID,
-    resultId,
-    status,
-    message,
-    severity,
-    category: CAT,
-  };
+  const r: CheckResult = { checkerId: ID, resultId, status, message, severity, category: CAT };
   if (extras.fix !== undefined) r.fix = extras.fix;
   if (extras.detail !== undefined) r.detail = extras.detail;
   return r;
 }
 
 /**
- * Static checker core. Skips unless an npm lockfile is present. Runs
- * `npm audit --json` via the injected dep and parses `metadata.vulnerabilities`.
- * Emits up to two results (critical + high can co-occur):
+ * Static checker core. Detects the package manager from the lockfile, runs
+ * `<pm> audit --json` via the injected dep, and normalizes the result to
+ * critical/high counts. Outcomes:
  *   - 'skip' 'no-project-context' — ctx.project is null
- *   - 'skip' 'no-npm-lockfile' — no package-lock.json / npm-shrinkwrap.json
+ *   - 'skip' 'no-lockfile' — no recognized lockfile (npm/pnpm/yarn)
  *   - 'skip' 'aborted' — signal aborted
- *   - 'fail' 'critical-vulnerabilities' — one or more critical vulns (severity critical)
- *   - 'warn' 'high-vulnerabilities' — one or more high-severity vulns (severity major)
- *   - 'pass' 'no-critical-or-high' — audit clean of critical/high findings
+ *   - 'fail' 'critical-vulnerabilities' — one or more critical vulns
+ *   - 'warn' 'high-vulnerabilities' — one or more high-severity vulns
+ *   - 'pass' 'no-critical-or-high' — clean of critical/high
  *   - 'fail' 'audit-runtime-error' — subprocess threw or output unparseable
  */
 export async function runNpmAudit(
@@ -107,19 +143,13 @@ export async function runNpmAudit(
     ];
   }
 
-  let hasLockfile = false;
-  for (const name of NPM_LOCKFILES) {
-    if (await project.fs.exists(path.join(project.projectDir, name))) {
-      hasLockfile = true;
-      break;
-    }
-  }
-  if (!hasLockfile) {
+  const pm = await detectPackageManager(project);
+  if (pm === null) {
     return [
       makeResult(
         'skip',
-        'no-npm-lockfile',
-        'Skipped: no package-lock.json or npm-shrinkwrap.json found; npm audit requires a lockfile.',
+        'no-lockfile',
+        'Skipped: no package-lock.json, pnpm-lock.yaml, or yarn.lock found; audit requires a lockfile.',
         SEV_CRITICAL,
       ),
     ];
@@ -127,7 +157,7 @@ export async function runNpmAudit(
 
   let stdout: string;
   try {
-    const result = await deps.runNpmAudit(project.projectDir, ctx.signal);
+    const result = await deps.runAudit(pm.name, project.projectDir, ctx.signal);
     if (ctx.signal.aborted) {
       return [
         makeResult('skip', 'aborted', 'Skipped: scan aborted before completion.', SEV_CRITICAL),
@@ -139,56 +169,46 @@ export async function runNpmAudit(
       makeResult(
         'fail',
         'audit-runtime-error',
-        `npm audit failed to run: ${err instanceof Error ? err.message : String(err)}`,
+        `${pm.name} audit failed to run: ${err instanceof Error ? err.message : String(err)}`,
         SEV_CRITICAL,
-        { fix: 'Ensure npm is installed and the project directory is accessible.' },
+        { fix: `Ensure ${pm.name} is installed and the project directory is accessible.` },
       ),
     ];
   }
 
-  let vulns: VulnCounts;
-  try {
-    const parsed = JSON.parse(stdout) as { metadata?: { vulnerabilities?: VulnCounts } };
-    vulns = parsed.metadata?.vulnerabilities ?? {};
-  } catch {
+  const counts = parseVulnCounts(pm.name, stdout);
+  if (counts === null) {
     return [
       makeResult(
         'fail',
         'audit-runtime-error',
-        'npm audit returned unparseable JSON output.',
+        `${pm.name} audit returned unparseable JSON output.`,
         SEV_CRITICAL,
-        { fix: 'Run `npm audit --json` manually to inspect the output.' },
+        { fix: `Run \`${pm.name} audit --json\` manually to inspect the output.` },
       ),
     ];
   }
 
-  const critical = typeof vulns.critical === 'number' ? vulns.critical : 0;
-  const high = typeof vulns.high === 'number' ? vulns.high : 0;
   const results: CheckResult[] = [];
-
-  if (critical > 0) {
+  if (counts.critical > 0) {
     results.push(
       makeResult(
         'fail',
         'critical-vulnerabilities',
-        `npm audit found ${critical} critical vulnerability/vulnerabilities.`,
+        `${pm.name} audit found ${counts.critical} critical vulnerability/vulnerabilities.`,
         SEV_CRITICAL,
-        {
-          fix: 'Run `npm audit fix` or update the affected packages to resolve critical vulnerabilities.',
-        },
+        { fix: `Run \`${pm.name} audit fix\` or update the affected packages.` },
       ),
     );
   }
-  if (high > 0) {
+  if (counts.high > 0) {
     results.push(
       makeResult(
         'warn',
         'high-vulnerabilities',
-        `npm audit found ${high} high-severity vulnerability/vulnerabilities.`,
+        `${pm.name} audit found ${counts.high} high-severity vulnerability/vulnerabilities.`,
         SEV_MAJOR,
-        {
-          fix: 'Run `npm audit fix` or update the affected packages to resolve high-severity vulnerabilities.',
-        },
+        { fix: `Run \`${pm.name} audit fix\` or update the affected packages.` },
       ),
     );
   }
@@ -197,12 +217,11 @@ export async function runNpmAudit(
       makeResult(
         'pass',
         'no-critical-or-high',
-        'npm audit found no critical or high-severity vulnerabilities.',
+        `${pm.name} audit found no critical or high-severity vulnerabilities.`,
         SEV_CRITICAL,
       ),
     );
   }
-
   return results;
 }
 
