@@ -3,6 +3,8 @@ import * as path from 'node:path';
 import type { Command } from 'commander';
 import { ConfigError, type RawConfig, loadConfigFile } from '../../internal/config/load.js';
 import { resolveConfig } from '../../internal/config/resolve.js';
+import { crawl } from '../../internal/crawl/crawl.js';
+import { collectSitemapUrls } from '../../internal/crawl/sitemap.js';
 import { type RunLiveChecksOptions, runLiveChecks } from '../../internal/orchestrator/run-live.js';
 import {
   type RunStaticChecksOptions,
@@ -19,7 +21,8 @@ import { computeExitCode } from '../../internal/reporter/exit-code.js';
 import { formatJunit } from '../../internal/reporter/junit.js';
 import { formatSarif } from '../../internal/reporter/sarif.js';
 import { formatTerminal } from '../../internal/reporter/terminal.js';
-import type { CheckResult, Checker } from '../../types/index.js';
+import { DefaultHttpClient } from '../../internal/runtime/http-client.js';
+import type { CheckResult, Checker, HttpClient } from '../../types/index.js';
 
 export type OutputFormat = 'terminal' | 'sarif' | 'junit';
 
@@ -109,6 +112,14 @@ export interface LiveScanOptions {
   url?: string;
   /** Multiple URLs to test; live checkers run once per URL, tagged by URL. */
   urls?: string[];
+  /** Fetch this sitemap.xml and add its page URLs to the target list. */
+  sitemap?: string;
+  /** Crawl same-origin links from the seed URL and add them to the target list. */
+  crawl?: boolean;
+  /** Cap for --crawl page discovery. Default 20. */
+  maxPages?: number;
+  /** Test seam: HttpClient used for sitemap/crawl URL discovery. */
+  httpClient?: HttpClient;
   /** When provided, the run is 'combined' (static + live); otherwise 'live'. */
   projectDir?: string;
   /** ANSI colors in stdout. Default: false. */
@@ -181,14 +192,48 @@ export async function runScan(options: ScanOptions = {}): Promise<ScanResult> {
 export async function runLiveScan(options: LiveScanOptions): Promise<ScanResult> {
   const color = options.color ?? false;
 
-  const urls =
+  const explicit =
     options.urls !== undefined && options.urls.length > 0
       ? options.urls
       : options.url !== undefined
         ? [options.url]
         : [];
+
+  // Discover additional targets from a sitemap and/or a same-origin crawl.
+  const discovered: string[] = [];
+  if (options.sitemap !== undefined || options.crawl === true) {
+    const http = options.httpClient ?? new DefaultHttpClient();
+    try {
+      if (options.sitemap !== undefined) {
+        discovered.push(...(await collectSitemapUrls(http, options.sitemap)));
+      }
+      if (options.crawl === true) {
+        const seed = explicit[0] ?? options.url;
+        if (seed === undefined) {
+          return { stdout: '', stderr: 'error: --crawl requires --url (a seed)\n', exitCode: 2 };
+        }
+        const crawlOpts = options.maxPages !== undefined ? { maxPages: options.maxPages } : {};
+        discovered.push(...(await crawl(http, seed, crawlOpts)));
+      }
+    } catch (err) {
+      return {
+        stdout: '',
+        stderr: `error: URL discovery failed: ${(err as Error).message}\n`,
+        exitCode: 2,
+      };
+    }
+  }
+
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  for (const u of [...explicit, ...discovered]) {
+    if (!seen.has(u)) {
+      seen.add(u);
+      urls.push(u);
+    }
+  }
   if (urls.length === 0) {
-    return { stdout: '', stderr: 'error: provide --url or --urls\n', exitCode: 2 };
+    return { stdout: '', stderr: 'error: provide --url, --urls, or --sitemap\n', exitCode: 2 };
   }
   for (const u of urls) {
     let parsed: URL;
@@ -265,6 +310,9 @@ export function registerScanCommand(program: Command): void {
     .option('--project-dir <path>', 'Path to the project directory (default: cwd)')
     .option('--url <url>', 'URL to run live checks against (live or combined mode)')
     .option('--urls <list>', 'Comma-separated URLs to run live checks against (multi-URL)')
+    .option('--sitemap <url>', 'Fetch a sitemap.xml and scan the page URLs it lists')
+    .option('--crawl', 'Crawl same-origin links from the seed --url (bounded)')
+    .option('--max-pages <n>', 'Max pages for --crawl discovery (default 20)')
     .option('--no-color', 'Disable ANSI colors in output')
     .option('--format <format>', 'Output format: terminal | sarif | junit (default: terminal)')
     .option('--baseline <file>', 'Baseline file; gate exit code on new findings only')
@@ -274,6 +322,9 @@ export function registerScanCommand(program: Command): void {
         projectDir?: string;
         url?: string;
         urls?: string;
+        sitemap?: string;
+        crawl?: boolean;
+        maxPages?: string;
         color?: boolean;
         format?: string;
         baseline?: string;
@@ -296,15 +347,32 @@ export function registerScanCommand(program: Command): void {
                 .filter((u) => u.length > 0)
             : undefined;
 
+        const maxPagesNum =
+          options.maxPages !== undefined ? Number.parseInt(options.maxPages, 10) : undefined;
+
         let result: ScanResult;
-        if (options.url !== undefined || urlList !== undefined) {
-          // live (url[s] only) or combined (url[s] + explicit project-dir)
+        if (
+          options.url !== undefined ||
+          urlList !== undefined ||
+          options.sitemap !== undefined ||
+          options.crawl === true
+        ) {
+          // live (url[s]/sitemap/crawl) or combined (+ explicit project-dir)
           const liveOptions: LiveScanOptions = { color: colorEnabled, format };
           if (options.url !== undefined) {
             liveOptions.url = options.url;
           }
           if (urlList !== undefined) {
             liveOptions.urls = urlList;
+          }
+          if (options.sitemap !== undefined) {
+            liveOptions.sitemap = options.sitemap;
+          }
+          if (options.crawl === true) {
+            liveOptions.crawl = true;
+          }
+          if (maxPagesNum !== undefined && Number.isFinite(maxPagesNum) && maxPagesNum > 0) {
+            liveOptions.maxPages = maxPagesNum;
           }
           if (options.projectDir !== undefined) {
             liveOptions.projectDir = options.projectDir;

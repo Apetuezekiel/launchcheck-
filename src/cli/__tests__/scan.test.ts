@@ -220,3 +220,60 @@ describe('runLiveScan multi-URL validation', () => {
     expect(res.exitCode).toBe(2);
   });
 });
+
+describe('runLiveScan URL discovery (sitemap + crawl)', () => {
+  // A live checker stub (valid registry id) that tags nothing itself — the
+  // orchestrator tags each result with its URL. It never touches live resources,
+  // so no network beyond the injected discovery httpClient occurs.
+  const stub = {
+    id: 'csp-present',
+    name: 'stub',
+    category: 'security' as const,
+    mode: 'live' as const,
+    run: async () => [
+      {
+        checkerId: 'csp-present',
+        resultId: 'stub',
+        status: 'pass' as const,
+        message: 'ok',
+        severity: 'major' as const,
+        category: 'security' as const,
+      },
+    ],
+  };
+
+  function sitemapHttp(body: string) {
+    return {
+      async fetch() {
+        return { body } as unknown as import('../../types/index.js').HttpResponse;
+      },
+    };
+  }
+
+  test('--sitemap discovers page URLs and runs the live checker once per URL', async () => {
+    const xml =
+      '<urlset><url><loc>http://app.test/p1</loc></url><url><loc>http://app.test/p2</loc></url></urlset>';
+    const res = await runLiveScan({
+      sitemap: 'http://app.test/sitemap.xml',
+      httpClient: sitemapHttp(xml),
+      checkers: [stub],
+    });
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain('url: http://app.test/p1');
+    expect(res.stdout).toContain('url: http://app.test/p2');
+  });
+
+  test('--crawl without a seed URL is a usage error (exit 2)', async () => {
+    const res = await runLiveScan({ crawl: true, httpClient: sitemapHttp('') });
+    expect(res.exitCode).toBe(2);
+    expect(res.stderr).toContain('requires --url');
+  });
+
+  test('a sitemap yielding no usable URLs and no explicit URL is an error (exit 2)', async () => {
+    const res = await runLiveScan({
+      sitemap: 'http://app.test/sitemap.xml',
+      httpClient: sitemapHttp('<urlset></urlset>'),
+    });
+    expect(res.exitCode).toBe(2);
+  });
+});
