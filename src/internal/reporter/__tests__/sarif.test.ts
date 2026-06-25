@@ -84,3 +84,32 @@ describe('formatSarif', () => {
     expect(ruleIds).toContain('csp-present');
   });
 });
+
+describe('formatSarif with live URL-tagged findings', () => {
+  const doc = JSON.parse(
+    formatSarif([
+      {
+        checkerId: 'csp-present',
+        resultId: 'csp-missing',
+        status: 'fail',
+        message: 'CSP absent',
+        severity: 'major',
+        category: 'security',
+        url: 'https://example.test/',
+      },
+    ]),
+  );
+  const res = doc.runs[0].results[0];
+
+  test('url exposed as result property', () => {
+    expect(res.properties.url).toBe('https://example.test/');
+  });
+  test('locationless live finding uses the URL as the artifact uri', () => {
+    expect(res.locations[0].physicalLocation.artifactLocation.uri).toBe('https://example.test/');
+  });
+  test('url is part of the partial fingerprint', () => {
+    expect(res.partialFingerprints.launchcheckId).toBe(
+      'csp-present/csp-missing@https://example.test/',
+    );
+  });
+});

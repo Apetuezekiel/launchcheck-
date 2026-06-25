@@ -15,6 +15,18 @@ function makeResult(
 }
 
 describe('formatTerminal', () => {
+  test('annotates a finding with its URL when present', () => {
+    const r = makeResult({
+      checkerId: 'csp-present',
+      resultId: 'csp-missing',
+      status: 'fail',
+      message: 'CSP absent',
+      category: 'security',
+      url: 'https://example.test/',
+    });
+    expect(formatTerminal([r])).toContain('url: https://example.test/');
+  });
+
   test('empty results returns "launchcheck: no results.\\n"', () => {
     expect(formatTerminal([])).toBe('launchcheck: no results.\n');
   });

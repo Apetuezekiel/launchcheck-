@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
-import { runScan } from '../commands/scan.js';
+import { runLiveScan, runScan } from '../commands/scan.js';
 
 async function makeProject(content: { [relPath: string]: string }): Promise<string> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'lc-scan-'));
@@ -201,5 +201,22 @@ describe('runScan', () => {
     // No preflight result names leak into the output.
     expect(result.stdout).not.toContain('git-available');
     expect(result.stdout).not.toContain('__preflight__');
+  });
+});
+
+describe('runLiveScan multi-URL validation', () => {
+  test('rejects an invalid URL in --urls (exit 2)', async () => {
+    const res = await runLiveScan({ urls: ['https://ok.test/', 'not a url'] });
+    expect(res.exitCode).toBe(2);
+    expect(res.stderr).toContain('invalid URL');
+  });
+  test('rejects a non-http(s) URL (exit 2)', async () => {
+    const res = await runLiveScan({ urls: ['ftp://x.test/'] });
+    expect(res.exitCode).toBe(2);
+    expect(res.stderr).toContain('http or https');
+  });
+  test('empty target list is a usage error (exit 2)', async () => {
+    const res = await runLiveScan({ urls: [] });
+    expect(res.exitCode).toBe(2);
   });
 });
