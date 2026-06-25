@@ -29,6 +29,14 @@ function ctxWith(pkg: Record<string, unknown>): CheckContext {
 }
 
 describe('unusedDependenciesChecker', () => {
+  test('a dependency used only via `import type` is counted as used (AST, no FP)', async () => {
+    await write('src/index.ts', "import type { Schema } from 'zod';\nexport type S = Schema;\n");
+    const ctx = ctxWith({ dependencies: { zod: '^3' } });
+    const results = await unusedDependenciesChecker.run(ctx);
+    expect(results[0]?.status).toBe('pass');
+    expect(results[0]?.resultId).toBe('all-dependencies-used');
+  });
+
   test('id, name, category, and mode match the registry entry', () => {
     const entry = findById('unused-dependencies');
     expect(entry).toBeDefined();
