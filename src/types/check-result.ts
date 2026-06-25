@@ -56,4 +56,12 @@ export interface CheckResult {
    * Set by the orchestrator, not the checker. Used for performance debugging.
    */
   durationMs?: number;
+
+  /**
+   * The live URL this finding pertains to, when the run targeted one or more
+   * URLs. Set by the live orchestrator (one value per URL); absent for static
+   * findings. Part of the finding fingerprint so the same checker on different
+   * URLs stays distinct.
+   */
+  url?: string;
 }

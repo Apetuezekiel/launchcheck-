@@ -105,8 +105,10 @@ export interface ScanOptions {
 
 /** Options for runLiveScan (live / combined mode). */
 export interface LiveScanOptions {
-  /** Primary URL under test. Required. */
-  url: string;
+  /** Single URL under test. Required unless `urls` is provided. */
+  url?: string;
+  /** Multiple URLs to test; live checkers run once per URL, tagged by URL. */
+  urls?: string[];
   /** When provided, the run is 'combined' (static + live); otherwise 'live'. */
   projectDir?: string;
   /** ANSI colors in stdout. Default: false. */
@@ -179,21 +181,32 @@ export async function runScan(options: ScanOptions = {}): Promise<ScanResult> {
 export async function runLiveScan(options: LiveScanOptions): Promise<ScanResult> {
   const color = options.color ?? false;
 
-  let parsed: URL;
-  try {
-    parsed = new URL(options.url);
-  } catch {
-    return { stdout: '', stderr: `error: invalid --url '${options.url}'\n`, exitCode: 2 };
+  const urls =
+    options.urls !== undefined && options.urls.length > 0
+      ? options.urls
+      : options.url !== undefined
+        ? [options.url]
+        : [];
+  if (urls.length === 0) {
+    return { stdout: '', stderr: 'error: provide --url or --urls\n', exitCode: 2 };
   }
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    return {
-      stdout: '',
-      stderr: `error: --url must use http or https, got '${parsed.protocol}'\n`,
-      exitCode: 2,
-    };
+  for (const u of urls) {
+    let parsed: URL;
+    try {
+      parsed = new URL(u);
+    } catch {
+      return { stdout: '', stderr: `error: invalid URL '${u}'\n`, exitCode: 2 };
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return {
+        stdout: '',
+        stderr: `error: URLs must use http or https, got '${parsed.protocol}' in '${u}'\n`,
+        exitCode: 2,
+      };
+    }
   }
 
-  const runOptions: RunLiveChecksOptions = { url: options.url };
+  const runOptions: RunLiveChecksOptions = { urls };
   if (options.checkers !== undefined) {
     runOptions.checkers = options.checkers;
   }
@@ -213,7 +226,7 @@ export async function runLiveScan(options: LiveScanOptions): Promise<ScanResult>
     runOptions.config = resolveConfig({
       projectDir,
       fileConfig,
-      cliOverrides: { url: options.url },
+      cliOverrides: { url: urls[0] as string },
     });
   }
 
@@ -251,6 +264,7 @@ export function registerScanCommand(program: Command): void {
     .description('Run pre-launch checks. Static by default; --url adds live checks.')
     .option('--project-dir <path>', 'Path to the project directory (default: cwd)')
     .option('--url <url>', 'URL to run live checks against (live or combined mode)')
+    .option('--urls <list>', 'Comma-separated URLs to run live checks against (multi-URL)')
     .option('--no-color', 'Disable ANSI colors in output')
     .option('--format <format>', 'Output format: terminal | sarif | junit (default: terminal)')
     .option('--baseline <file>', 'Baseline file; gate exit code on new findings only')
@@ -259,6 +273,7 @@ export function registerScanCommand(program: Command): void {
       async (options: {
         projectDir?: string;
         url?: string;
+        urls?: string;
         color?: boolean;
         format?: string;
         baseline?: string;
@@ -273,10 +288,24 @@ export function registerScanCommand(program: Command): void {
           process.exit(2);
         }
 
+        const urlList =
+          options.urls !== undefined
+            ? options.urls
+                .split(',')
+                .map((u) => u.trim())
+                .filter((u) => u.length > 0)
+            : undefined;
+
         let result: ScanResult;
-        if (options.url !== undefined) {
-          // live (url only) or combined (url + explicit project-dir)
-          const liveOptions: LiveScanOptions = { url: options.url, color: colorEnabled, format };
+        if (options.url !== undefined || urlList !== undefined) {
+          // live (url[s] only) or combined (url[s] + explicit project-dir)
+          const liveOptions: LiveScanOptions = { color: colorEnabled, format };
+          if (options.url !== undefined) {
+            liveOptions.url = options.url;
+          }
+          if (urlList !== undefined) {
+            liveOptions.urls = urlList;
+          }
           if (options.projectDir !== undefined) {
             liveOptions.projectDir = options.projectDir;
           }

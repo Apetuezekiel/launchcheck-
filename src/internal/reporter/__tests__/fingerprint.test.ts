@@ -28,6 +28,19 @@ describe('fingerprint', () => {
       'csp-present/csp-missing@src/a.ts:0',
     );
   });
+  test('includes url when present; same finding on different URLs stays distinct', () => {
+    expect(fingerprint(r({ url: 'https://a.test/' }))).toBe(
+      'csp-present/csp-missing@https://a.test/',
+    );
+    expect(fingerprint(r({ url: 'https://a.test/' }))).not.toBe(
+      fingerprint(r({ url: 'https://b.test/' })),
+    );
+  });
+  test('url and location compose', () => {
+    expect(fingerprint(r({ url: 'https://a.test/', location: { file: 'x.ts', line: 3 } }))).toBe(
+      'csp-present/csp-missing@https://a.test/@x.ts:3',
+    );
+  });
   test('deterministic and distinct per resultId', () => {
     expect(fingerprint(r({}))).toBe(fingerprint(r({})));
     expect(fingerprint(r({ resultId: 'csp-weak' }))).not.toBe(fingerprint(r({})));

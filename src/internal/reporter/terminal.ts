@@ -149,6 +149,9 @@ function formatOne(r: CheckResult, c: Colorizers): string[] {
   if (r.durationMs !== undefined) meta.push(`${Math.round(r.durationMs)}ms`);
   const out: string[] = [`  ${statusGlyph(r.status, c)}  ${id} ${c.dim(meta.join(' '))}`];
   out.push(`    ${r.message}`);
+  if (r.url !== undefined) {
+    out.push(`    ${c.dim(`url: ${r.url}`)}`);
+  }
   if (r.detail !== undefined && r.detail.length > 0) {
     for (const line of r.detail.split('\n')) {
       out.push(`    ${c.dim(line)}`);

@@ -21,6 +21,7 @@ interface SarifResult {
   level: SarifLevel;
   message: { text: string };
   partialFingerprints: { launchcheckId: string };
+  properties?: { url: string };
   locations?: Array<{
     physicalLocation: {
       artifactLocation: { uri: string };
@@ -62,6 +63,9 @@ export function formatSarif(results: ReadonlyArray<CheckResult>): string {
       message: { text: r.fix ? `${r.message} Fix: ${r.fix}` : r.message },
       partialFingerprints: { launchcheckId: fingerprint(r) },
     };
+    if (r.url !== undefined) {
+      out.properties = { url: r.url };
+    }
     if (r.location !== undefined) {
       out.locations = [
         {
@@ -78,6 +82,9 @@ export function formatSarif(results: ReadonlyArray<CheckResult>): string {
           },
         },
       ];
+    } else if (r.url !== undefined) {
+      // Live finding with no file location: use the page URL as the SARIF artifact.
+      out.locations = [{ physicalLocation: { artifactLocation: { uri: r.url } } }];
     }
     return out;
   });
