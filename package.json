@@ -73,11 +73,8 @@
     "undici": "6.21.0"
   },
   "devDependencies": {
-    "@axe-core/puppeteer": "^4.12.1",
     "@biomejs/biome": "1.9.4",
     "@types/node": "22.10.5",
-    "lighthouse": "^12.8.2",
-    "puppeteer": "^24.43.1",
     "tsup": "8.3.5",
     "typescript": "5.7.3",
     "vitest": "2.1.8"
@@ -85,6 +82,7 @@
   "peerDependencies": {
     "@axe-core/puppeteer": "*",
     "lighthouse": "*",
+    "puppeteer": "*",
     "typescript": ">=5.0.0"
   },
   "peerDependenciesMeta": {
