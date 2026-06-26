@@ -457,6 +457,7 @@ describe('runStaticChecks — abort-listener cap', () => {
     for (let i = 0; i < 11; i++) {
       ac.signal.addEventListener('abort', () => {});
     }
+    await new Promise((r) => setImmediate(r)); // MaxListenersExceededWarning fires on the next tick
     process.off('warning', onWarn);
     expect(exceeded).toHaveLength(0);
   });
