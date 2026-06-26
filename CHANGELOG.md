@@ -4,6 +4,59 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-06-26
+
+Major release. Everything since 1.0.0: CI-grade reporting (SARIF / JUnit / HTML),
+a baseline gate, multi-URL scanning with sitemap ingestion and bounded crawl,
+AST-based static scanners, package-manager breadth (npm / pnpm / yarn), Lighthouse
+variance damping, and a single shared browser for axe + Lighthouse. One behavior
+change makes this a major release (see Changed → Breaking).
+
+### Added
+
+- **Output formats** — `--format sarif` (SARIF 2.1.0 for GitHub code-scanning /
+  PR annotations), `--format junit` (JUnit XML for CI test reporters), and
+  `--format html` (a single self-contained, shareable report; no scripts, grouped
+  by URL then severity). Findings carry a stable fingerprint
+  (`checkerId/resultId[@url][@file:line]`), excluding volatile message text.
+- **Baseline gate** — `--baseline <file>` gates the exit code on *new* findings
+  only (adoptable on legacy projects with pre-existing issues); `--update-baseline`
+  snapshots the current findings.
+- **Multi-URL scanning** — `--urls a,b,c` runs the live checkers once per URL,
+  each finding tagged and fingerprinted by URL; static checkers run once.
+- **Sitemap + crawl URL sources** — `--sitemap <url>` ingests a `sitemap.xml`
+  (follows a sitemap index one level deep, same-origin, capped via
+  `--max-sitemap-urls`, default 50); `--crawl` does a bounded same-origin
+  breadth-first crawl from the seed `--url` (`--max-pages`, default 20), honoring
+  `robots.txt` (`--no-robots` to opt out).
+- **Package-manager breadth** — `npm-audit` and `dependencies-outdated` now detect
+  the package manager from the lockfile and run npm, **pnpm**, or **yarn**
+  (previously npm-only; non-npm projects were skipped).
+- **Lighthouse median-of-N** — `thresholds["lighthouse-runs"]` (default 1) audits
+  N times per URL and reports the per-metric median, damping single-run score
+  variance.
+- **Terminal `--summary`** — a triage view printing only fail/warn findings plus
+  the counts line.
+
+### Changed
+
+- **BREAKING: Lighthouse now requires `puppeteer`.** axe and Lighthouse share a
+  single headless browser — Lighthouse attaches to the puppeteer browser via its
+  CDP debug port instead of self-launching Chrome. This removes the axe/Lighthouse
+  contention ("Page/Frame is not ready") and roughly halves browser time/memory.
+  Consequence: with `lighthouse` installed but `puppeteer` absent, the Lighthouse
+  checks now **skip** instead of running. Install `puppeteer` to keep them.
+- `console-log-scan` and `unused-dependencies` are now **AST-based** (TypeScript
+  compiler API, via the existing optional `typescript` peer) instead of regex,
+  eliminating false positives from matches inside strings and comments. They fall
+  back to the prior regex scan when `typescript` is not installed.
+
+### Internal
+
+- Live-pipeline integration tests against a loopback fixture server (zero mocks,
+  zero external network) covering the real HTTP/DOM checker pipeline; the test
+  suite has grown substantially alongside the features above.
+
 ## [1.0.0] - 2026-06-23
 
 First stable release. All 59 registry checkers are implemented and validated; the
