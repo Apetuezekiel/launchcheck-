@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'vitest';
 import type { LighthouseResult } from '../../../types/index.js';
-import type { LighthouseAdapter } from '../resources/lighthouse.js';
-import { LighthouseResource } from '../resources/lighthouse.js';
+import { type ChromeAdapter, type ChromeBrowser, ChromeResource } from '../resources/chrome.js';
+import { type LighthouseAdapter, LighthouseResource } from '../resources/lighthouse.js';
 
 const SIGNAL = new AbortController().signal;
 const URL = 'https://example.test/';
+const FAKE_BROWSER: ChromeBrowser = { id: 'fake-browser' };
 
 const STUB_RESULT: LighthouseResult = {
   categories: {
@@ -20,7 +21,18 @@ const STUB_RESULT: LighthouseResult = {
   },
 };
 
-function makeAdapter(installed: boolean): LighthouseAdapter {
+function chromeAdapter(installed: boolean): ChromeAdapter {
+  return {
+    isInstalled: () => installed,
+    launch: async () => FAKE_BROWSER,
+    close: async () => undefined,
+  };
+}
+
+const chromeResource = (installed = true): ChromeResource =>
+  new ChromeResource(chromeAdapter(installed), SIGNAL);
+
+function lighthouseAdapter(installed: boolean): LighthouseAdapter {
   return {
     isInstalled: () => installed,
     run: async () => STUB_RESULT,
@@ -28,29 +40,41 @@ function makeAdapter(installed: boolean): LighthouseAdapter {
 }
 
 describe('LighthouseResource', () => {
-  test('available when adapter reports installed', () => {
-    const r = new LighthouseResource(URL, makeAdapter(true), SIGNAL);
+  test('available when lighthouse and chrome are both installed', () => {
+    const r = new LighthouseResource(URL, chromeResource(true), lighthouseAdapter(true), SIGNAL);
     expect(r.isAvailable()).toBe(true);
   });
 
-  test('unavailable when adapter reports not installed', () => {
-    const r = new LighthouseResource(URL, makeAdapter(false), SIGNAL);
+  test('unavailable when lighthouse is not installed', () => {
+    const r = new LighthouseResource(URL, chromeResource(true), lighthouseAdapter(false), SIGNAL);
     expect(r.isAvailable()).toBe(false);
-  });
-
-  test('unavailable reason mentions lighthouse when not installed', () => {
-    const r = new LighthouseResource(URL, makeAdapter(false), SIGNAL);
     expect(r.unavailableReason()).toContain('lighthouse');
   });
 
-  test('dependencies returns empty array (no chrome dependency)', () => {
-    const r = new LighthouseResource(URL, makeAdapter(true), SIGNAL);
-    expect(r.dependencies()).toHaveLength(0);
+  test('cascades to unavailable when chrome (puppeteer) is unavailable', () => {
+    const r = new LighthouseResource(URL, chromeResource(false), lighthouseAdapter(true), SIGNAL);
+    expect(r.isAvailable()).toBe(false);
+    expect(r.unavailableReason()).toContain('chrome');
   });
 
-  test('compute resolves to the adapter run result', async () => {
-    const r = new LighthouseResource(URL, makeAdapter(true), SIGNAL);
+  test('depends on the chrome resource', () => {
+    const chrome = chromeResource(true);
+    const r = new LighthouseResource(URL, chrome, lighthouseAdapter(true), SIGNAL);
+    expect(r.dependencies()).toContain(chrome);
+  });
+
+  test('compute resolves to the adapter run result, using the shared browser', async () => {
+    let seenBrowser: ChromeBrowser | undefined;
+    const adapter: LighthouseAdapter = {
+      isInstalled: () => true,
+      run: async (browser) => {
+        seenBrowser = browser;
+        return STUB_RESULT;
+      },
+    };
+    const r = new LighthouseResource(URL, chromeResource(true), adapter, SIGNAL);
     await expect(r.get()).resolves.toEqual(STUB_RESULT);
+    expect(seenBrowser).toBe(FAKE_BROWSER);
   });
 
   test('default runs = 1 calls the adapter once', async () => {
@@ -62,7 +86,7 @@ describe('LighthouseResource', () => {
         return STUB_RESULT;
       },
     };
-    const r = new LighthouseResource(URL, adapter, SIGNAL);
+    const r = new LighthouseResource(URL, chromeResource(true), adapter, SIGNAL);
     await r.get();
     expect(calls).toBe(1);
   });
@@ -81,7 +105,7 @@ describe('LighthouseResource', () => {
         };
       },
     };
-    const r = new LighthouseResource(URL, adapter, SIGNAL, 3);
+    const r = new LighthouseResource(URL, chromeResource(true), adapter, SIGNAL, 3);
     const result = await r.get();
     expect(i).toBe(3);
     expect(result.categories.performance.score).toBe(0.7);

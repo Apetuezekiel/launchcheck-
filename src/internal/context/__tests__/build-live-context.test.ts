@@ -44,8 +44,13 @@ describe('buildLiveContext', () => {
     });
     expect(live.axe.isAvailable()).toBe(false);
   });
-  test('lighthouse resource is available when lighthouse adapter reports installed', () => {
+  test('lighthouse resource is available when lighthouse + chrome adapters report installed', () => {
     const { live } = buildLiveContext('https://example.test/', {
+      chromeAdapter: {
+        isInstalled: () => true,
+        launch: async () => ({}),
+        close: async () => undefined,
+      },
       lighthouseAdapter: {
         isInstalled: () => true,
         run: async () => ({
