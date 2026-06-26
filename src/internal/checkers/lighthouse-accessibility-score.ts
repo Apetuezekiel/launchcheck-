@@ -17,7 +17,20 @@ export const lighthouseAccessibilityScoreChecker: Checker = {
       return got.results;
     }
     const min = readThreshold(ctx, THRESHOLD_KEY, DEFAULT_MIN);
-    const score = Math.round(got.lighthouse.categories.accessibility.score * 100);
+    const raw = got.lighthouse.categories.accessibility.score;
+    if (raw === null) {
+      return [
+        liveResult(
+          ID,
+          CAT,
+          SEV,
+          'skip',
+          'accessibility-score-unavailable',
+          'Lighthouse did not report an Accessibility score for this run.',
+        ),
+      ];
+    }
+    const score = Math.round(raw * 100);
     if (score >= min) {
       return [
         liveResult(

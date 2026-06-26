@@ -149,15 +149,19 @@ export interface DomElement {
  * Lighthouse type is enormous; expose only what we consume. Extend as needed.
  */
 export interface LighthouseResult {
+  // A category score is null when Lighthouse did not produce it for this run
+  // (a failed/empty audit). Consumers skip rather than treating null as 0.
   categories: {
-    performance: { score: number }; // 0..1
-    accessibility: { score: number };
-    'best-practices': { score: number };
-    seo: { score: number };
+    performance: { score: number | null }; // 0..1 or null
+    accessibility: { score: number | null };
+    'best-practices': { score: number | null };
+    seo: { score: number | null };
   };
+  // Named Core Web Vital audits are absent when Lighthouse did not report them
+  // for this run; consumers skip when absent (never coerce to 0).
   audits: {
-    'largest-contentful-paint': { numericValue: number }; // ms
-    'cumulative-layout-shift': { numericValue: number };
+    'largest-contentful-paint'?: { numericValue: number }; // ms
+    'cumulative-layout-shift'?: { numericValue: number };
     'interaction-to-next-paint'?: { numericValue: number }; // ms
     [auditId: string]: { numericValue?: number; score?: number | null } | undefined;
   };

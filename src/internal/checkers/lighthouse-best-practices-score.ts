@@ -17,7 +17,20 @@ export const lighthouseBestPracticesScoreChecker: Checker = {
       return got.results;
     }
     const min = readThreshold(ctx, THRESHOLD_KEY, DEFAULT_MIN);
-    const score = Math.round(got.lighthouse.categories['best-practices'].score * 100);
+    const raw = got.lighthouse.categories['best-practices'].score;
+    if (raw === null) {
+      return [
+        liveResult(
+          ID,
+          CAT,
+          SEV,
+          'skip',
+          'best-practices-score-unavailable',
+          'Lighthouse did not report a Best Practices score for this run.',
+        ),
+      ];
+    }
+    const score = Math.round(raw * 100);
     if (score >= min) {
       return [
         liveResult(

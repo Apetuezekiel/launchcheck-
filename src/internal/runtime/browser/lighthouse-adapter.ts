@@ -36,11 +36,11 @@ interface RawLhr {
   categories?: Record<string, RawCategory | undefined>;
   audits?: Record<string, RawAudit | undefined>;
 }
-function score(category: RawCategory | undefined): number {
-  return typeof category?.score === 'number' ? category.score : 0;
+function score(category: RawCategory | undefined): number | null {
+  return typeof category?.score === 'number' ? category.score : null;
 }
-function numeric(audit: RawAudit | undefined): number {
-  return typeof audit?.numericValue === 'number' ? audit.numericValue : 0;
+function numeric(audit: RawAudit | undefined): number | null {
+  return typeof audit?.numericValue === 'number' ? audit.numericValue : null;
 }
 /** Extracts the CDP debug port from a puppeteer browser's ws endpoint. */
 function debugPort(browser: ChromeBrowser): number {
@@ -65,8 +65,21 @@ export const lighthouseAdapter: LighthouseAdapter = {
     });
     const lhr: RawLhr = result?.lhr ?? {};
     const cats = lhr.categories ?? {};
-    const audits = lhr.audits ?? {};
-    const inp = audits['interaction-to-next-paint'];
+    const rawAudits = lhr.audits ?? {};
+    // Include a Core Web Vital audit only when Lighthouse actually reported a
+    // numeric value; absent metrics are omitted (the checker skips) rather than
+    // coerced to 0, which would be a false PASS/FAIL.
+    const audits: LighthouseResult['audits'] = {};
+    for (const id of [
+      'largest-contentful-paint',
+      'cumulative-layout-shift',
+      'interaction-to-next-paint',
+    ] as const) {
+      const value = numeric(rawAudits[id]);
+      if (value !== null) {
+        audits[id] = { numericValue: value };
+      }
+    }
     return {
       categories: {
         performance: { score: score(cats.performance) },
@@ -74,17 +87,7 @@ export const lighthouseAdapter: LighthouseAdapter = {
         'best-practices': { score: score(cats['best-practices']) },
         seo: { score: score(cats.seo) },
       },
-      audits: {
-        'largest-contentful-paint': {
-          numericValue: numeric(audits['largest-contentful-paint']),
-        },
-        'cumulative-layout-shift': {
-          numericValue: numeric(audits['cumulative-layout-shift']),
-        },
-        ...(inp !== undefined
-          ? { 'interaction-to-next-paint': { numericValue: numeric(inp) } }
-          : {}),
-      },
+      audits,
     };
   },
 };

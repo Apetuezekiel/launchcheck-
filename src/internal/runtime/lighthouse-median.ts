@@ -37,7 +37,10 @@ export function medianLighthouse(results: LighthouseResult[]): LighthouseResult 
 
   const categories = { ...base.categories };
   for (const cat of CATEGORIES) {
-    categories[cat] = { score: median(results.map((r) => r.categories[cat].score)) };
+    const scores = results
+      .map((r) => r.categories[cat].score)
+      .filter((s): s is number => s !== null);
+    categories[cat] = { score: scores.length > 0 ? median(scores) : null };
   }
 
   const audits = { ...base.audits };

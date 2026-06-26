@@ -69,3 +69,18 @@ describe('lighthousePerformanceScoreChecker', () => {
     expect(r[0]?.resultId).toBe('performance-score-low');
   });
 });
+
+describe('lighthousePerformanceScoreChecker — missing category (not coerced to 0)', () => {
+  test('skips when Lighthouse did not report a performance score', async () => {
+    const r = await lighthousePerformanceScoreChecker.run(
+      makeLiveContext({
+        lighthouse: {
+          ...PASS_RESULT,
+          categories: { ...PASS_RESULT.categories, performance: { score: null } },
+        },
+      }),
+    );
+    expect(r[0]?.status).toBe('skip');
+    expect(r[0]?.resultId).toBe('performance-score-unavailable');
+  });
+});

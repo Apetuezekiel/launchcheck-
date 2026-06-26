@@ -17,7 +17,20 @@ export const coreWebVitalClsChecker: Checker = {
       return got.results;
     }
     const max = readThreshold(ctx, THRESHOLD_KEY, DEFAULT_SCORE);
-    const value = got.lighthouse.audits['cumulative-layout-shift'].numericValue;
+    const audit = got.lighthouse.audits['cumulative-layout-shift'];
+    if (audit?.numericValue === undefined) {
+      return [
+        liveResult(
+          ID,
+          CAT,
+          SEV,
+          'skip',
+          'cls-unavailable',
+          'CLS not reported by Lighthouse for this run.',
+        ),
+      ];
+    }
+    const value = audit.numericValue;
     if (value <= max) {
       return [liveResult(ID, CAT, SEV, 'pass', 'cls-ok', `CLS is ${value} (<= ${max}).`)];
     }

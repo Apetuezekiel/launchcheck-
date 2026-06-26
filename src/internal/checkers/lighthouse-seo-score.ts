@@ -17,7 +17,20 @@ export const lighthouseSeoScoreChecker: Checker = {
       return got.results;
     }
     const min = readThreshold(ctx, THRESHOLD_KEY, DEFAULT_MIN);
-    const score = Math.round(got.lighthouse.categories.seo.score * 100);
+    const raw = got.lighthouse.categories.seo.score;
+    if (raw === null) {
+      return [
+        liveResult(
+          ID,
+          CAT,
+          SEV,
+          'skip',
+          'seo-score-unavailable',
+          'Lighthouse did not report a SEO score for this run.',
+        ),
+      ];
+    }
+    const score = Math.round(raw * 100);
     if (score >= min) {
       return [
         liveResult(
