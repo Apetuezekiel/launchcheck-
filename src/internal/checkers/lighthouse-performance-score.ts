@@ -17,7 +17,20 @@ export const lighthousePerformanceScoreChecker: Checker = {
       return got.results;
     }
     const min = readThreshold(ctx, THRESHOLD_KEY, DEFAULT_MIN);
-    const score = Math.round(got.lighthouse.categories.performance.score * 100);
+    const raw = got.lighthouse.categories.performance.score;
+    if (raw === null) {
+      return [
+        liveResult(
+          ID,
+          CAT,
+          SEV,
+          'skip',
+          'performance-score-unavailable',
+          'Lighthouse did not report a Performance score for this run.',
+        ),
+      ];
+    }
+    const score = Math.round(raw * 100);
     if (score >= min) {
       return [
         liveResult(

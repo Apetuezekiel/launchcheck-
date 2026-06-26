@@ -65,3 +65,20 @@ describe('coreWebVitalLcpChecker', () => {
     expect(r[0]?.resultId).toBe('lcp-slow');
   });
 });
+
+describe('coreWebVitalLcpChecker — missing audit (not coerced to 0ms)', () => {
+  test('skips when Lighthouse did not report LCP', async () => {
+    const lighthouse: LighthouseResult = {
+      categories: {
+        performance: { score: 1 },
+        accessibility: { score: 1 },
+        'best-practices': { score: 1 },
+        seo: { score: 1 },
+      },
+      audits: {},
+    };
+    const r = await coreWebVitalLcpChecker.run(makeLiveContext({ lighthouse }));
+    expect(r[0]?.status).toBe('skip');
+    expect(r[0]?.resultId).toBe('lcp-unavailable');
+  });
+});

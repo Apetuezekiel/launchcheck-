@@ -56,3 +56,21 @@ describe('medianLighthouse', () => {
     expect(() => medianLighthouse([])).toThrow();
   });
 });
+
+describe('medianLighthouse — null category scores', () => {
+  test('a category null in every run stays null; others median', () => {
+    const r1 = lh(0.5, 100);
+    const r2 = lh(0.7, 200);
+    r1.categories.seo.score = null;
+    r2.categories.seo.score = null;
+    const out = medianLighthouse([r1, r2]);
+    expect(out.categories.seo.score).toBeNull();
+    expect(out.categories.performance.score).toBe(0.6);
+  });
+  test('a category null in some runs medians only the present ones', () => {
+    const r1 = lh(0.4, 100);
+    const r2 = lh(0.8, 200);
+    r1.categories.performance.score = null;
+    expect(medianLighthouse([r1, r2]).categories.performance.score).toBe(0.8);
+  });
+});

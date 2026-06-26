@@ -17,7 +17,20 @@ export const coreWebVitalLcpChecker: Checker = {
       return got.results;
     }
     const max = readThreshold(ctx, THRESHOLD_KEY, DEFAULT_MS);
-    const value = Math.round(got.lighthouse.audits['largest-contentful-paint'].numericValue);
+    const audit = got.lighthouse.audits['largest-contentful-paint'];
+    if (audit?.numericValue === undefined) {
+      return [
+        liveResult(
+          ID,
+          CAT,
+          SEV,
+          'skip',
+          'lcp-unavailable',
+          'LCP not reported by Lighthouse for this run.',
+        ),
+      ];
+    }
+    const value = Math.round(audit.numericValue);
     if (value <= max) {
       return [liveResult(ID, CAT, SEV, 'pass', 'lcp-ok', `LCP is ${value}ms (<= ${max}ms).`)];
     }
