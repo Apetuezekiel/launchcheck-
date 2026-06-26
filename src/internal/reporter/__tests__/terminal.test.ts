@@ -15,6 +15,48 @@ function makeResult(
 }
 
 describe('formatTerminal', () => {
+  test('summary mode prints only fail/warn findings plus the counts line', () => {
+    const out = formatTerminal(
+      [
+        makeResult({
+          checkerId: 'csp-present',
+          resultId: 'csp',
+          status: 'fail',
+          message: 'CSP gone',
+          category: 'security',
+        }),
+        makeResult({
+          checkerId: 'todo-fixme-scan',
+          resultId: 'todo',
+          status: 'warn',
+          message: '2 TODOs',
+          category: 'code-quality',
+        }),
+        makeResult({
+          checkerId: 'ssl-valid',
+          resultId: 'ok',
+          status: 'pass',
+          message: 'fine',
+          category: 'security',
+        }),
+        makeResult({
+          checkerId: 'a11y',
+          resultId: 'sk',
+          status: 'skip',
+          message: 'no peer',
+          category: 'accessibility',
+        }),
+      ],
+      { summary: true },
+    );
+    expect(out).toContain('csp-present/csp');
+    expect(out).toContain('todo-fixme-scan/todo');
+    expect(out).not.toContain('ssl-valid/ok'); // pass omitted
+    expect(out).not.toContain('a11y/sk'); // skip omitted
+    expect(out).toContain('Summary:');
+    expect(out).toContain('1 failed');
+  });
+
   test('annotates a finding with its URL when present', () => {
     const r = makeResult({
       checkerId: 'csp-present',
