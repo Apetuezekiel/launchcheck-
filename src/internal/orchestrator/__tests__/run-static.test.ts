@@ -1,3 +1,4 @@
+import { setMaxListeners } from 'node:events';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -427,5 +428,36 @@ describe('runStaticChecks', () => {
     expect(errResult?.status).toBe('fail');
     expect(errResult?.resultId).toBe('__error__');
     expect(okResult?.status).toBe('pass');
+  });
+});
+
+describe('runStaticChecks — abort-listener cap', () => {
+  test("lifts the run signal's listener cap to unlimited (silences Node 18 MaxListenersExceededWarning)", async () => {
+    const ac = new AbortController();
+    // Node 18's AbortSignal default cap is 10 — the source of the warning when
+    // >10 checkers attach abort listeners. (Node 22's default is already 0.)
+    // Set it explicitly so the assertion is deterministic on any Node version.
+    setMaxListeners(10, ac.signal);
+
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'lc-abort-cap-'));
+    try {
+      await runStaticChecks({ projectDir: dir, signal: ac.signal, checkers: [] });
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+    // The orchestrator should have called setMaxListeners(0, signal), lifting
+    // the cap to unlimited. Verify by adding 11 abort listeners — if the cap
+    // were still 10, AbortSignal emits MaxListenersExceededWarning synchronously
+    // via process.emitWarning when the 11th listener is added.
+    const exceeded: string[] = [];
+    const onWarn = (w: Error) => {
+      if (w.name === 'MaxListenersExceededWarning') exceeded.push(w.message);
+    };
+    process.on('warning', onWarn);
+    for (let i = 0; i < 11; i++) {
+      ac.signal.addEventListener('abort', () => {});
+    }
+    process.off('warning', onWarn);
+    expect(exceeded).toHaveLength(0);
   });
 });
