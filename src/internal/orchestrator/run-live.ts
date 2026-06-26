@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { setMaxListeners } from 'node:events';
 import { performance } from 'node:perf_hooks';
 import type {
   CheckContext,
@@ -71,6 +72,10 @@ export async function runLiveChecks(options: RunLiveChecksOptions): Promise<Chec
     options.config ?? defaultLiveConfig(targets[0] as string, options.projectDir);
   const logger: Logger = options.logger ?? NOOP_LOGGER;
   const signal: AbortSignal = options.signal ?? new AbortController().signal;
+  // Many checkers attach an abort listener (subprocess/fetch) to this one
+  // run-scoped signal; lift the per-EventTarget cap so Node does not warn
+  // (MaxListenersExceededWarning) when more than 10 run concurrently.
+  setMaxListeners(0, signal);
 
   let project: ProjectContext | null = null;
   if (options.projectDir !== undefined) {

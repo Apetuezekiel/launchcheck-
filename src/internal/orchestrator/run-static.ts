@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { setMaxListeners } from 'node:events';
 import { performance } from 'node:perf_hooks';
 import type {
   CheckContext,
@@ -60,6 +61,10 @@ export async function runStaticChecks(options: RunStaticChecksOptions): Promise<
   const config: ResolvedConfig = options.config ?? defaultStaticConfig(projectDir);
   const logger: Logger = options.logger ?? NOOP_LOGGER;
   const signal: AbortSignal = options.signal ?? new AbortController().signal;
+  // Many checkers attach an abort listener (subprocess/fetch) to this one
+  // run-scoped signal; lift the per-EventTarget cap so Node does not warn
+  // (MaxListenersExceededWarning) when more than 10 run concurrently.
+  setMaxListeners(0, signal);
 
   const project = await buildProjectContext(projectDir, { ignore: config.ignore });
 
